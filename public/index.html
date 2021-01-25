@@ -11,7 +11,9 @@
     <noscript>
       <strong>We're sorry but <%= htmlWebpackPlugin.options.title %> doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-    <div id="app"></div>
-    <!-- built files will be auto injected -->
+    <div id="mainview"></div>
+    <!-- built files will be auto injected in this div
+    This div is a placeholder for the vue application which is setup under src/main.js and replaces this div.
+    Within the src/main.js file the vue application mounted here with the command: "new Vue(...).$mount('#mainview')"-->
   </body>
 </html>
