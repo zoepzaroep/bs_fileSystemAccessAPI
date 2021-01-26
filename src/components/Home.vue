@@ -5,6 +5,7 @@
       </div>
       <button v-on:click="openFile()">Open</button>
       <button v-on:click="saveFile()">Save</button>
+      <button v-on:click="$emit('open-File')">Emit</button>
       <textarea id="editor" cols="30" rows="10" placeholder="Textarea"></textarea>
   </div>
 </template>
@@ -14,7 +15,8 @@
     name: 'Home',
     // data() {
     //   return {
-    //     fileHandle: ''
+    //     fileHandle: [],
+    //     textArea: document.getElementById('editor')
     //   }
     // },
     methods: {
@@ -24,7 +26,7 @@
         [fileHandle] = await window.showOpenFilePicker();
         const file = await fileHandle.getFile();
         const contents = await file.text();
-        textArea.value = contents;
+        textArea.value = contents + " Hi";
       },
       async saveFile() {
         let fileHandle;
@@ -32,7 +34,7 @@
         [fileHandle] = await window.showOpenFilePicker();
         const file = await fileHandle.getFile();
         const contents = await file.text();
-        textArea.value = contents;
+        textArea.value = contents + " Hi";
         let writable = await fileHandle.createWritable();
         await writable.write(textArea.value);
         await writable.close();

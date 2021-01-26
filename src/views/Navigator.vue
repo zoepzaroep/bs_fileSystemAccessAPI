@@ -5,7 +5,7 @@
       </div>
       <div>
         <router-link to="/">Back to the Startscreen</router-link>
-        <Home msg="Welcome to Your Vue.js App"/>
+        <Home v-on:open-File="openFile"/>
         <Link1 />
         <Link2 />
       </div>
@@ -24,6 +24,16 @@ export default {
     Home,
     Link1,
     Link2
+  },
+  methods: {
+    async openFile() {
+        let fileHandle;
+        let textArea = document.getElementById('editor');
+        [fileHandle] = await window.showOpenFilePicker();
+        const file = await fileHandle.getFile();
+        const contents = await file.text();
+        textArea.value = contents;
+      }
   }
 }
 </script>
