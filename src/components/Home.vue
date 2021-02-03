@@ -11,30 +11,25 @@
 </template>
 
 <script>
+  let fileHandle; //Declaring a varibale here makes it available for all methods below
+
   export default {
     name: 'Home',
-    // data() {
-    //   return {
-    //     fileHandle: [],
-    //     textArea: document.getElementById('editor')
-    //   }
-    // },
+    data() {
+      return {
+        // globalFileHandle: 'fileHandle' // This makes the varibale of fileHandle global
+      }
+    },
     methods: {
       async openFile() {
-        let fileHandle;
         let textArea = document.getElementById('editor');
         [fileHandle] = await window.showOpenFilePicker();
         const file = await fileHandle.getFile();
         const contents = await file.text();
-        textArea.value = contents + " Hi";
+        textArea.value = contents;
       },
       async saveFile() {
-        let fileHandle;
         let textArea = document.getElementById('editor');
-        [fileHandle] = await window.showOpenFilePicker();
-        const file = await fileHandle.getFile();
-        const contents = await file.text();
-        textArea.value = contents + " Hi";
         let writable = await fileHandle.createWritable();
         await writable.write(textArea.value);
         await writable.close();
