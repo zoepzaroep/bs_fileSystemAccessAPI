@@ -12,14 +12,13 @@
   </div>
 </template>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.11/jstree.min.js" integrity="sha512-bU6dl4fd2XN3Do3aWypPP2DcKywDyR3YlyszV+rOw9OpglrGyBs6TyTsbglf9umgE+sy+dKm1UHhi07Lv+Vtfg==" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
 <script>
   let fileHandle; //Declaring a varibale here makes it available for all methods below
   let folder;
-  let files = [];
+  // let files = [];
   let entry;
   let treeData = [];
+  // let nestedTree = [];
   // treeDOM = $('#folder');
 
   export default {
@@ -30,7 +29,7 @@
         // globalFileHandle: 'fileHandle' // This makes the varibale of fileHandle global
       }
     },
-    
+
     methods: {
       async openFile() {
         let textArea = document.getElementById('editor');
@@ -47,32 +46,49 @@
       },
       async openFolder() {
         folder = await window.showDirectoryPicker();
-        files = await this.getFiles(folder)
+        await this.getFiles(folder);
         // console.log(files)
         // for await (entry of folder.values()) {
         //   console.log(entry)
         // }
+        // console.log(files);
         console.log(treeData)
       },
-      async getFiles(folder, parent = null) {
+      // async getFiles(folder, parent = null) {
+      async getFiles(folder) {
         for await (entry of folder.values()) {
           // console.log(entry.name)
           if (entry.kind == "file") {
-            files.push(entry)
-            // console.log(entry.name)
+            // treeData.push({
+            //   id: entry.name,
+            //   parent: parent ?? '#',
+            //   text: entry.name
+            // })
+            // // files.push(entry)
+            // // console.log(entry.name)
+            treeData.push(entry)
           }
           else {
-            // console.log(entry.name)
-            files.push(this.getFiles(entry, entry.name))
+            // // console.log(entry.name)
+            // nestedTree.push(this.getFiles(entry, entry.name));
+            // treeData.push({
+            //   id: entry.name,
+            //   parent: parent ?? '#',
+            //   text: entry.name,
+            //   children: nestedTree
+            // })
+            // // files.push(this.getFiles(entry, entry.name))
+            treeData.push(entry)
+            treeData.push(this.getFiles(entry));
           }
-          treeData.push({
-            id: entry.name,
-            parent: parent ?? '#',
-            text: entry.name
-          })
+          // treeData.push({
+          //   id: entry.name,
+          //   parent: parent ?? '#',
+          //   text: entry.name
+          // })
         }
         // return [...(await Promise.all(files)).flat()]
-        return files
+        // return files
       },
       keyDown: function () {
         const activeElement = document.getElementsByClassName('active')[0]
