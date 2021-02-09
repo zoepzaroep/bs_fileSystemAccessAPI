@@ -15,11 +15,7 @@
 <script>
   let fileHandle; //Declaring a varibale here makes it available for all methods below
   let folder;
-  // let files = [];
-  let entry;
   let treeData = [];
-  // let nestedTree = [];
-  // treeDOM = $('#folder');
 
   export default {
     name: 'Home',
@@ -38,58 +34,32 @@
         const contents = await file.text();
         textArea.value = contents;
       },
+
       async saveFile() {
         let textArea = document.getElementById('editor');
         let writable = await fileHandle.createWritable();
         await writable.write(textArea.value);
         await writable.close();
       },
+
       async openFolder() {
         folder = await window.showDirectoryPicker();
         await this.getFiles(folder);
-        // console.log(files)
-        // for await (entry of folder.values()) {
-        //   console.log(entry)
-        // }
-        // console.log(files);
         console.log(treeData)
       },
-      // async getFiles(folder, parent = null) {
+
       async getFiles(folder) {
-        for await (entry of folder.values()) {
-          // console.log(entry.name)
-          if (entry.kind == "file") {
-            // treeData.push({
-            //   id: entry.name,
-            //   parent: parent ?? '#',
-            //   text: entry.name
-            // })
-            // // files.push(entry)
-            // // console.log(entry.name)
-            treeData.push(entry)
+        for await (const entry of folder.values()) {
+          if (entry.kind === "directory") {
+            treeData.push(entry.name)
+            await this.getFiles(entry)
           }
-          else {
-            // // console.log(entry.name)
-            // nestedTree.push(this.getFiles(entry, entry.name));
-            // treeData.push({
-            //   id: entry.name,
-            //   parent: parent ?? '#',
-            //   text: entry.name,
-            //   children: nestedTree
-            // })
-            // // files.push(this.getFiles(entry, entry.name))
-            treeData.push(entry)
-            treeData.push(this.getFiles(entry));
+          else if (entry.kind === "file") {
+            treeData.push(entry.name)
           }
-          // treeData.push({
-          //   id: entry.name,
-          //   parent: parent ?? '#',
-          //   text: entry.name
-          // })
         }
-        // return [...(await Promise.all(files)).flat()]
-        // return files
       },
+
       keyDown: function () {
         const activeElement = document.getElementsByClassName('active')[0]
         if (activeElement && !isNaN(event.key) && event.key > 0) {
