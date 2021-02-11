@@ -20,7 +20,7 @@ const routes = [
     component: NavWrapper,
     children: [
       {
-        path: '',
+        path: 'Home', // setting the path to '' (path: '') this component will be handelt as default path
         component: Home
       },
       {
