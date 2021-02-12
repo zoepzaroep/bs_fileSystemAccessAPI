@@ -3,16 +3,19 @@
       <div id="div">
         Home Component - Message from Navigator.vue: <!-- {{msg}} -->
       </div>
-      <button v-on:click="openFile()">Open</button>
-      <button v-on:click="saveFile()">Save</button>
-      <button v-on:click="$emit('open-File')">Emit</button>
-      <button v-on:click="openFolder()">Open Folder</button>
-      <textarea id="editor" cols="30" rows="10" placeholder="Textarea"></textarea>
+        <button v-on:click="openFile()">Open</button>
+        <button v-on:click="saveFile()">Save</button>
+        <button v-on:click="$emit('open-File')">Emit</button>
+        <button v-on:click="openFolder()">Open Folder</button>
+        <textarea id="editor" cols="30" rows="10" placeholder="Textarea"></textarea>
+        <v-jstree :data="data" show-checkbox multiple allow-batch whole-row @item-click="itemClick"></v-jstree>
       <div id="folder"></div>
   </div>
 </template>
 
 <script>
+   import VJstree from 'vue-jstree'
+
   //Declaring a varibale here makes it available for all methods below
   let fileHandle;
   let folder;
@@ -27,10 +30,128 @@
 
   export default {
     name: 'Home',
+    components: {
+      VJstree
+    },
 
     data() {
       return {
+        // globalTreeData: treeData
         // globalFileHandle: 'fileHandle' // This makes the varibale of fileHandle global
+        // data: treeData
+        data: [ //Hardcoded treeData --> Make this dynamically loading!
+          {
+              "id": 0,
+              "text": "root",
+              "value": "",
+              "icon": "",
+              "opened": "true",
+              "selected": "false",
+              "disabled": "false",
+              "loading": "false",
+              "parent": "#",
+              "children": [
+                  {
+                      "id": 1,
+                      "text": "branch1",
+                      "value": "",
+                      "icon": "",
+                      "opened": "true",
+                      "selected": "false",
+                      "disabled": "false",
+                      "loading": "false",
+                      "parent": 0,
+                      "children": [
+                          {
+                              "id": 2,
+                              "text": "subbranch1",
+                              "value": "",
+                              "icon": "",
+                              "opened": "true",
+                              "selected": "false",
+                              "disabled": "false",
+                              "loading": "false",
+                              "parent": 1,
+                              "children": []
+                          }
+                      ]
+                  },
+                  {
+                      "id": 3,
+                      "text": "branch2",
+                      "value": "",
+                      "icon": "",
+                      "opened": "true",
+                      "selected": "false",
+                      "disabled": "false",
+                      "loading": "false",
+                      "parent": 0,
+                      "children": [
+                          {
+                              "id": 4,
+                              "text": "test4.txt",
+                              "value": "",
+                              "icon": "",
+                              "opened": "true",
+                              "selected": "false",
+                              "disabled": "false",
+                              "loading": "false",
+                              "parent": 3,
+                              "children": []
+                          },
+                          {
+                              "id": 5,
+                              "text": "test5.txt",
+                              "value": "",
+                              "icon": "",
+                              "opened": "true",
+                              "selected": "false",
+                              "disabled": "false",
+                              "loading": "false",
+                              "parent": 3,
+                              "children": []
+                          }
+                      ]
+                  },
+                  {
+                      "id": 6,
+                      "text": "test2.txt",
+                      "value": "",
+                      "icon": "",
+                      "opened": "true",
+                      "selected": "false",
+                      "disabled": "false",
+                      "loading": "false",
+                      "parent": 0,
+                      "children": []
+                  },
+                  {
+                      "id": 7,
+                      "text": "test3.txt",
+                      "value": "",
+                      "icon": "",
+                      "opened": "true",
+                      "selected": "false",
+                      "disabled": "false",
+                      "loading": "false",
+                      "parent": 0,
+                      "children": []
+                  }
+              ]
+          },
+          {
+              "id": 8,
+              "text": "test1.txt",
+              "value": "",
+              "icon": "",
+              "opened": "true",
+              "selected": "false",
+              "disabled": "false",
+              "loading": "false",
+              "parent": "#",
+              "children": []
+          }
+        ]
       }
     },
 
@@ -167,6 +288,10 @@
         path.length = newArrayLength
       },
 
+      itemClick (node) { //Source: https://github.com/zdy1988/vue-jstree
+        console.log(node.model.text + ' clicked !')
+      },
+
       async assign(obj, keyPath, value) { //Source: https://stackoverflow.com/questions/5484673/javascript-how-to-dynamically-create-nested-objects-using-object-names-given-by
         lastKeyIndex = keyPath.length - 1;
         for (var i = 0; i < lastKeyIndex; ++ i) {
@@ -198,8 +323,6 @@
         // console.log(parentIndex)
         // console.log('.............................................')
       },
-
-
 
       keyDown: function () {
         const activeElement = document.getElementsByClassName('active')[0]
