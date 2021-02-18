@@ -1,10 +1,11 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
-import NavWrapper from '@/views/Navigator'
+import Navigator from '@/views/Navigator'
 import Startscreen from '@/views/Startscreen'
 import Home from '@/components/Home'
 import Link1 from '@/components/Link1'
 import Link2 from '@/components/Link2'
+import Tree from '@/components/Tree'
 
 Vue.use(VueRouter)
 
@@ -17,22 +18,28 @@ const routes = [
   {
     path: '/Navigator',
     name: 'Navigator',
-    component: NavWrapper,
+    component: Navigator,
     children: [
       {
         path: 'Home', // setting the path to '' (path: '') this component will be handelt as default path
-        component: Home
+        component: Home,
+        children: [
+          {
+            path: 'Tree', // setting the path to '' (path: '') this component will be handelt as default path
+            component: Tree
+          }
+        ]
       },
       {
-        path: 'link1',
+        path: 'Link1',
         component: Link1
       },
       {
-        path: 'link2',
+        path: 'Link2',
         component: Link2
-      }
+      },
     ]
-  }
+  },
   // {
   //   path: '/about',
   //   name: 'About',
