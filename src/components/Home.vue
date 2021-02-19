@@ -1,13 +1,12 @@
 <template>
   <div class="hello">
-      <button v-on:click="openFile()">Open</button>
-      <button v-on:click="saveFile()">Save</button>
-      <button v-on:click="$emit('open-File')">Emit</button>
-      <button v-on:click="openFolder()">Open Folder</button>
-      <textarea id="editor" cols="30" rows="10" placeholder="Textarea"></textarea>
-      <div>
-        <Tree :treeStructure="globalTreeData" /> <!-- This passes the globalTreeData as the variable treeStructure down to the tree component (which is a child of this component) - Source: https://www.smashingmagazine.com/2020/01/data-components-vue-js/#propos-share-data-parent-child-->
-      </div>
+    <button v-on:click="openFile()">Open</button>
+    <button v-on:click="saveFile()">Save</button>
+    <button v-on:click="openFolder()">Open Folder</button>
+    <textarea id="editor" cols="30" rows="10" placeholder="Textarea"></textarea>
+    <div>
+      <Tree @push-clicked="push" :treeStructure="globalTreeData" /> <!-- This passes the globalTreeData as the variable treeStructure down to the tree component (which is a child of this component) - Source: https://www.smashingmagazine.com/2020/01/data-components-vue-js/#propos-share-data-parent-child-->
+    </div>
   </div>
 </template>
 
@@ -57,6 +56,7 @@
         folder = await window.showDirectoryPicker();
         await this.getFiles(folder);
         // console.log(treeData)
+        return "treeData"
       },
 
       async getFiles(folder, parentId = null, path = []) {
@@ -147,6 +147,22 @@
         }
       },
 
+      async push() {
+        // treeData.push({
+        //   id: "",
+        //   text: "",
+        //   value: "",
+        //   icon: "",
+        //   opened: "",
+        //   // selected: "false",
+        //   // disabled: "false",
+        //   // loading: "false",
+        //   parent: "",
+        //   children: []
+        // })
+        console.log("emitted")
+      },
+
       async getIndex(obj, keyPath, id) {
         
         let keyPathLength = keyPath.length
@@ -197,10 +213,6 @@
         if (activeElement && !isNaN(event.key) && event.key > 0) {
           activeElement.innerHTML = event.key
         }
-      },
-
-      itemClick (node) { //Source: https://github.com/zdy1988/vue-jstree
-        console.log(node.model.text + ' clicked !')
       },
 
     },
