@@ -1,7 +1,7 @@
 <template>
   <div class="hello">
       <div id="div">
-        Link2 Component
+        FilePanel Component
       </div>
   </div>
 </template>
