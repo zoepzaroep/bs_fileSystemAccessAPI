@@ -1,12 +1,12 @@
 <template>
-  <div class="hello">
+  <div>
       <div>
         <img src="../assets/logo.png" alt="Blankscape" width="50">
       </div>
       <div>
         <router-link to="/">Back to the Startscreen</router-link>
       </div>
-      <div class="row">
+      <div>
         <div>
           <TreePanel />
         </div>

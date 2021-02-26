@@ -1,5 +1,5 @@
 <template>
-  <div class="hello">
+  <div>
     <div>
       <img src="../assets/logo.png" alt="Blankscape" width="200">
     </div>

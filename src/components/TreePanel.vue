@@ -1,5 +1,5 @@
 <template>
-  <div class="hello">
+  <div>
     <div class="column tree">
       <div>
         TreePanel Component
@@ -262,6 +262,7 @@ Furthermore loading times can be improved by not loading all the nested objects 
 </script>
 
 <style scoped>
+
 .column {
   float: left;
 }
@@ -272,7 +273,8 @@ Furthermore loading times can be improved by not loading all the nested objects 
 
 .jstree {
   width: 100%;
-  overflow: hidden;
+  max-height: calc(100vh - 121px); /* This makes the jstree exactly as tall as the window so the horizontal scroll bar is still visible*/
+  overflow: auto; /* overflow: hidden completely hides it, overflow: auto adds a scrollbar if needed */
 }
 
 .folder {

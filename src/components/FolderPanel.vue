@@ -1,5 +1,5 @@
 <template>
-  <div class="hello">
+  <div class="panel">
     <div id="div" class="column folder">
       <div>
         FolderPanel Component
@@ -43,6 +43,11 @@
 </script>
 
 <style scoped>
+
+.panel {
+  max-height: 100%;
+}
+
 .column {
   float: left;
 }
