@@ -3,6 +3,9 @@
       <div id="div">
         FilePanel Component
       </div>
+      <div id="div">
+        <textarea ref="editor" id="editor" cols="30" rows="10" placeholder="Textarea"></textarea>
+      </div>
   </div>
 </template>
 

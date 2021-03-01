@@ -10,12 +10,13 @@
         <button v-on:click="openFolder()">Open Folder</button>
       </div>
       <div>
-        <v-jstree class="column jstree" ref="tree" :data="treeData" show-checkbox multiple allow-batch whole-row @item-click="itemClick"></v-jstree>
+        <!-- Funny enough: adding the v-if to the jstree fixes another issue. When the tree is continously rendered while the treeData array is generated, selecting a file/folder in the tree afterwards does not automatically select all children files/folder. When only loading the tree after fully creating the tree this does work however -->
+        <v-jstree v-if="show" class="column jstree" ref="tree" :data="treeDataFolders" show-checkbox multiple allow-batch whole-row @item-click="itemClick"></v-jstree>
         <!-- The v-jstree component must be assigned another class otherwise the component somehow bugs and presumably applies the above mentioned class a second time hence shrinks down even further. This can be circumvented by assigning a special class to the v-jstree component which uses the whole width of the div and disables overflow. Result, the tree places itself perfectly in the div without overflowing -->
-      </div>  
+      </div>
     </div>
     <div class="column folder">
-      <FolderPanel @push-clicked="push" :treeDataProp="treeData" :contentsProp="contents" /> <!-- This passes the globalTreeData as the variable treeStructure down to the tree component (which is a child of this component) - Source: https://www.smashingmagazine.com/2020/01/data-components-vue-js/#propos-share-data-parent-child-->
+      <FolderPanel @push-clicked="push" :treeDataProp="treeDataFiles" :showProp="show" /> <!-- This passes the globalTreeData as the variable treeStructure down to the tree component (which is a child of this component) - Source: https://www.smashingmagazine.com/2020/01/data-components-vue-js/#propos-share-data-parent-child-->
     </div>
   </div>
 </template>
@@ -32,6 +33,9 @@ Furthermore loading times can be improved by not loading all the nested objects 
   let fileHandle;
   let folder;
   let treeData = [];
+  let treeDataFiles = [];
+  let treeDataFolders = [];
+  let show = false;
   let id = 0;
   let key;
   let Index = 0; //The index of the array of the currently processed object
@@ -48,7 +52,9 @@ Furthermore loading times can be improved by not loading all the nested objects 
       return {
         msg: 'Blankscape',
         treeData, //returns a global version of treeData which can be passed through to the child component (see above)
-        contents,
+        treeDataFiles,
+        treeDataFolders,
+        show
       }
     },
 
@@ -72,6 +78,9 @@ Furthermore loading times can be improved by not loading all the nested objects 
       },
 
       async openFolder() { //Source: https://www.youtube.com/watch?v=csCk4mrEmm8
+        
+        this.show = false
+
         /* 
         Empty array issue:
         - Warum funktioniert:
@@ -85,12 +94,10 @@ Furthermore loading times can be improved by not loading all the nested objects 
             treeData.pop();
         } //According to the internet, this is performance wise the fastest way to empty an array. Funny enough, this is also the only way updating the vue-jstree works after emptying the array. The most intuitive command "treeData = []" empties the array but somehow does not trigger the data update of components in the template. No idea why - search the whole internet for hours for this issue
         
-        // this.globalTreeData = [this.$refs.tree.initializeLoading()];
         folder = await window.showDirectoryPicker();
         await this.getFiles(folder);
         console.log(treeData)
-        // return 'treeData'
-        // this.$router.push({ path: '/Navigator' })
+        this.show = true
       },
 
       async getFiles(folder, parentId = null, path = []) {
@@ -115,6 +122,22 @@ Furthermore loading times can be improved by not loading all the nested objects 
               parent: parentId ?? '#',
               children: []
             })
+            await this.assign(treeDataFolders, path, {
+              disabled: "true",
+            })
+            await this.assign(treeDataFiles, path, { 
+              id: id,
+              text: entry.name,
+              value: "",
+              icon: "",
+              opened: "true",
+              // selected: "false",
+              // disabled: "false",
+              // loading: "false",
+              parent: parentId ?? '#',
+              children: []
+            })
+            
             // console.log('_____________________________________________')
             // console.log('_________________________________________FILE')
             // console.log('file_id: ' + id)
@@ -134,6 +157,24 @@ Furthermore loading times can be improved by not loading all the nested objects 
               parent: parentId ?? '#',
               children: []
             })
+            await this.assign(treeDataFolders, path, {
+              id: id,
+              text: entry.name,
+              value: "",
+              icon: "",
+              opened: "true",
+              // selected: "false",
+              // disabled: "false",
+              // loading: "false",
+              parent: parentId ?? '#',
+              children: []
+            })
+            await this.assign(treeDataFiles, path, {
+              disabled: "true",
+              opened: "true",
+              children: []
+            })
+            
             // console.log('_____________________________________________')
             // console.log('____________________________________DIRECTORY')
             // console.log('dir_id: ' + id)
@@ -158,8 +199,6 @@ Furthermore loading times can be improved by not loading all the nested objects 
         //When reaching this part of the function the deeper laying folder structures have been finished processing
         //Therefore updating the array to move up one folder in the path (if not already on the root level - which is considered within the moveUp function)
         await this.moveUp(path)
-
-        // return treeData
       },
 
       async assign(obj, keyPath, value) { //Source: https://stackoverflow.com/questions/5484673/javascript-how-to-dynamically-create-nested-objects-using-object-names-given-by
@@ -274,6 +313,7 @@ Furthermore loading times can be improved by not loading all the nested objects 
 .jstree {
   width: 100%;
   max-height: calc(100vh - 121px); /* This makes the jstree exactly as tall as the window so the horizontal scroll bar is still visible*/
+  min-height: calc(100vh - 121px);
   overflow: auto; /* overflow: hidden completely hides it, overflow: auto adds a scrollbar if needed */
 }
 
