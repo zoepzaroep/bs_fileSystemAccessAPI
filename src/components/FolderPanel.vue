@@ -1,18 +1,18 @@
 <template>
   <div>
     <div id="div" class="column folder">
-      <div>
+      <div class="header">
         FolderPanel Component
       </div>
-      <div>
+      <div class="header">
         <button v-on:click="log()">Log Prop</button>
         <button v-on:click="$emit('push-clicked')">Emit</button> <!-- Emit event to parent. Parent needs to listen to the emit with the following attribute in the child component: @push-clicked="push" where "push" is the method that shuld be run -->
       </div>
       <div>
-        <v-jstree v-if="showProp" class="column jstree" ref="tree" :data="treeDataProp" show-checkbox multiple allow-batch whole-row></v-jstree>
+        <v-jstree v-if="showProp" class="jstree" ref="tree" :data="treeDataProp" show-checkbox multiple allow-batch whole-row></v-jstree>
       </div>
     </div>
-    <div class="column file">
+    <div class="column filePanel">
       <FilePanel />
     </div>
   </div>
@@ -30,13 +30,19 @@
       FilePanel,
     },
 
+    data () {
+      return {
+        
+      }
+    },
+
     props: [
       'treeDataProp',
       'showProp'
     ],
 
     methods: {
-      async log() { //Source: https://github.com/zdy1988/vue-jstree/issues/12  
+      async log() { // Source: https://github.com/zdy1988/vue-jstree/issues/12  
         console.log(this.$props.treeDataProp)
       },
     }
@@ -50,7 +56,12 @@
 }
 
 .folder {
-  width: 33%;
+  width: 33%; /* one third of the FolderPanel which was granted 75% of the page in the TreePanel.vue - Hence, physically the folder column is exactly as wide as the tree column from the TreePanel */
+}
+
+.header {
+  display: block; /* float: left; & width: 100%; together have the same effect */
+  text-align: left;
 }
 
 .jstree {
@@ -60,8 +71,8 @@
   overflow: auto; /* overflow: hidden completely hides it, overflow: auto adds a scrollbar if needed */
 }
 
-.file {
-  width: 67%;
+.filePanel {
+  width: 67%; /* two thirds of the FolderPanel which was granted 75% of the page in the TreePanel.vue - Hence, physically the file column is exactly halfe the page width */
 }
 
 /* Clear floats after the columns */
