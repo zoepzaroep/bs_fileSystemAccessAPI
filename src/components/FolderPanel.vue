@@ -9,7 +9,7 @@
         <button v-on:click="$emit('push-clicked')">Emit</button> <!-- Emit event to parent. Parent needs to listen to the emit with the following attribute in the child component: @push-clicked="push" where "push" is the method that shuld be run -->
       </div>
       <div>
-        <v-jstree v-if="showProp" class="jstree" ref="tree" :data="treeDataProp" show-checkbox multiple allow-batch whole-row></v-jstree>
+        <v-jstree v-if="showProp" class="jstree" ref="tree" :data="fileTreeProp" show-checkbox multiple allow-batch whole-row></v-jstree>
       </div>
     </div>
     <div class="column filePanel">
@@ -37,13 +37,13 @@
     },
 
     props: [
-      'treeDataProp',
+      'fileTreeProp',
       'showProp'
     ],
 
     methods: {
       async log() { // Source: https://github.com/zdy1988/vue-jstree/issues/12  
-        console.log(this.$props.treeDataProp)
+        console.log(this.$props.fileTreeProp)
       },
     }
   }
