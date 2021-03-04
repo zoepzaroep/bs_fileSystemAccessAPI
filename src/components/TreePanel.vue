@@ -67,6 +67,7 @@ Improving loading times:
   let dataTree = [];
   let fileTree = [];
   let folderTree = [];
+  let tempPath = []
   let show = false;
   let id = 0;
   let key;
@@ -139,7 +140,7 @@ Improving loading times:
 
       },
 
-      async getFiles(folder, parentId = null, dataPath = [], folderPath = []) {
+      async getFiles(folder, parentId = null, dataPath = [], folderPath = [], newDataPath = []) {
 
         // Files and folders come alphabetically from API not sorted by files or folders
 
@@ -159,7 +160,8 @@ Improving loading times:
             disabled: "true",
             // loading: "false",
             parent: parentId ?? '#',
-            // path: dataPath,
+            dataPath: Array.from(dataPath),
+            folderPath: Array.from(folderPath),
             children: []
           };
           let dirDataObj = {
@@ -172,7 +174,8 @@ Improving loading times:
             // disabled: "false",
             // loading: "false",
             parent: parentId ?? '#',
-            // path: dataPath,
+            dataPath: Array.from(dataPath),
+            folderPath: Array.from(folderPath),
             children: []
           };
           let dirFolderObj = { // Even if this object would be out of the same structre as dirDataObj, there have to be two seperate objects for the function: "await this.assign(dataTree, dataPath, dirDataObj)" & "await this.assign(folderTree, folderPath, dirFolderObj)" otherwise it strangly adds multiple instances of teh object to the folderTree array. No idea why!
@@ -185,44 +188,32 @@ Improving loading times:
             // disabled: "false",
             // loading: "false",
             parent: parentId ?? '#',
-            // path: folderPath,
+            dataPath: Array.from(dataPath),
+            folderPath: Array.from(folderPath),
             children: []
           };
 
           if (entry.kind === "file") {
             await this.assign(dataTree, dataPath, fileObj)
-            /* TEST LOG:
-            console.log('_____________________________________________')
-            console.log('_________________________________________FILE')
-            console.log('file_id: ' + id)
-            console.log('file_path: ' + dataPath)
-            console.log('parentId: ' + parentId)
-            */
           }
           else if (entry.kind === "directory") {
+            
             await this.assign(dataTree, dataPath, dirDataObj)
             await this.assign(folderTree, folderPath, dirFolderObj)
-            /* TEST LOG:
-            console.log('_____________________________________________')
-            console.log('____________________________________DIRECTORY')
-            console.log('dir_id: ' + id)
-            console.log('dir_path: ' + dataPath)
-            console.log('parentId: ' + parentId)
-            */
 
-            // Get index of the current directory in the dataTree array
+            // Get index of the above added directory in the dataTree array
             await this.getIndex(dataTree, dataPath, id)
-            // Creating the path of this directory in the dataTree array where in the below nested .getFiles() function deeper laying files and folders can be added
+            // Creating the path of the above added directory in the dataTree array where in the below nested .getFiles() function deeper laying files and folders can be added
             await this.moveDown(dataPath)
 
-            //Get index of the current directory in the folderTree array
+            //Get index of the above added directory in the folderTree array
             await this.getIndex(folderTree, folderPath, id)
-            // Creating the path of this directory in the folderTree array where in the below nested .getFiles() function deeper laying folders can be added
+            // Creating the path of the above added directory in the folderTree array where in the below nested .getFiles() function deeper laying folders can be added
             await this.moveDown(folderPath)
 
             // Going deeper in the folder structure by opening another directory by accessing this function again (nested)
             // Therefore updating the array to pass the current tree path to the assign function later
-            await this.getFiles(entry, id, dataPath, folderPath)
+            await this.getFiles(entry, id, dataPath, folderPath, newDataPath)
           }
         }
         
@@ -248,10 +239,6 @@ Improving loading times:
             }
             obj = obj[key];
           }
-          // console.log("obj: " + obj)
-          // console.log("keyPath: " + keyPath)
-          // console.log("lastKeyIndex: " + lastKeyIndex)
-          // console.log("value: " + value)
           obj[keyPath[lastKeyIndex]].push(value);
         }
       },
@@ -284,13 +271,6 @@ Improving loading times:
       async moveUp(path) {
         let arrayLength = path.length
 
-        /* TEST LOG:
-        console.log('_____________________________________________')
-        console.log('___________________________________UP_A_LEVEL')
-        console.log('path: ' + path)
-        console.log('arrayLength: ' + arrayLength)
-        */
-
         // The path.length cannot be negative, hence negative values do not have to be considered ()
         if (arrayLength > 0) {
           let newArrayLength = arrayLength - 2
@@ -307,20 +287,52 @@ Improving loading times:
       },
       */
 
-      itemClick (node) { // Source: https://github.com/zdy1988/vue-jstree
+      async itemClick (node) { // Source: https://github.com/zdy1988/vue-jstree
         console.log(node.model.text + ' clicked !')
 
         // Emptying the array via this method instead of fileTree = [] because of above mentioned reasons
         while (this.fileTree.length > 0) {
             this.fileTree.pop();
         }
+        while (tempPath.length > 0) {
+            tempPath.pop();
+        }
 
-        // console.log(node.model.id)
-        // this.fileTree = dataTree.slice(node.model.id)
+        // Here the full path of the clicked folder has to be passed to the sliceTree() function. The dataPath array represents the path of the parent folder. Hence the index of the clicked folder and the string "children" has to be pushed to dataPath befor passing it on
+        tempPath = Array.from(node.model.dataPath)
 
-        console.log(dataTree[1].children)
-        this.fileTree = dataTree[1].children[1].children.slice(0)
+        await this.getIndex(dataTree, tempPath, node.model.id)
 
+        tempPath.push(index)
+        tempPath.push('children')
+
+        await this.sliceTree(dataTree, tempPath)
+
+        /* ToDo´s:
+              Combine root level files in one array
+              Combine all files of subfolder in their own subfolder array
+        */
+        
+      },
+
+      async sliceTree(obj, keyPath) {
+        
+        let keyPathLength = keyPath.length
+
+        if (keyPathLength < 2) {
+          this.fileTree = obj.slice(0)
+        }
+        else {
+          let lastKeyIndex = keyPath.length - 1;
+          for (var i = 0; i < lastKeyIndex; ++ i) {
+            key = keyPath[i];
+            if (!(key in obj)){
+              obj[key] = {}
+            }
+            obj = obj[key];
+          }
+          this.fileTree = obj[keyPath[lastKeyIndex]].slice(0)
+        }
       },
 
       keyDown: function () {
