@@ -67,7 +67,6 @@ Improving loading times:
   let dataTree = [];
   let fileTree = [];
   let folderTree = [];
-  let tempPath = []
   let show = false;
   let id = 0;
   let key;
@@ -293,11 +292,9 @@ Improving loading times:
       async itemClick (node) { // Source: https://github.com/zdy1988/vue-jstree
         console.log(node.model.text + ' clicked !')
 
-        // Emptying the array via this method instead of fileTree = [] because of above mentioned reasons
-        while (tempPath.length > 0) {
-            tempPath.pop();
-        }
-
+        let tempPath = []
+        // Emptying the array tempPath is not necessary because it is defined here and discarded after finishing this function. Otherwise, if declared globally it has to be emptied via the method from above
+        
         // Here the full path of the clicked folder has to be passed to the sliceTree() function. The dataPath array represents the path of the parent folder. Hence the index of the clicked folder and the string "children" has to be pushed to dataPath befor passing it on
         // tempPath = Array.from(node.model.dataPath)
         tempPath = node.model.dataPath.map((x) => x),
