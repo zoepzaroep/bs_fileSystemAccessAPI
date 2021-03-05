@@ -128,6 +128,9 @@ Improving loading times:
         while (folderTree.length > 0) {
             folderTree.pop();
         }
+        while (this.fileTree.length > 0) {
+            this.fileTree.pop();
+        }
 
         // dataTree = [];
         // folderTree = [];
@@ -160,8 +163,8 @@ Improving loading times:
             disabled: "true",
             // loading: "false",
             parent: parentId ?? '#',
-            dataPath: Array.from(dataPath),
-            folderPath: Array.from(folderPath),
+            dataPath: dataPath.map((x) => x), // Alternatively the following command can be used to make a shallow copy of an array "Array.from(dataPath)" - Source: https://www.freecodecamp.org/news/how-to-clone-an-array-in-javascript-1d3183468f6a/
+            folderPath: folderPath.map((x) => x), // Array.from(folderPath)
             children: []
           };
           let dirDataObj = {
@@ -174,8 +177,8 @@ Improving loading times:
             // disabled: "false",
             // loading: "false",
             parent: parentId ?? '#',
-            dataPath: Array.from(dataPath),
-            folderPath: Array.from(folderPath),
+            dataPath: dataPath.map((x) => x), // Alternatively the following command can be used to make a shallow copy of an array "Array.from(dataPath)" - Source: https://www.freecodecamp.org/news/how-to-clone-an-array-in-javascript-1d3183468f6a/
+            folderPath: folderPath.map((x) => x), // Array.from(folderPath)
             children: []
           };
           let dirFolderObj = { // Even if this object would be out of the same structre as dirDataObj, there have to be two seperate objects for the function: "await this.assign(dataTree, dataPath, dirDataObj)" & "await this.assign(folderTree, folderPath, dirFolderObj)" otherwise it strangly adds multiple instances of teh object to the folderTree array. No idea why!
@@ -188,8 +191,8 @@ Improving loading times:
             // disabled: "false",
             // loading: "false",
             parent: parentId ?? '#',
-            dataPath: Array.from(dataPath),
-            folderPath: Array.from(folderPath),
+            dataPath: dataPath.map((x) => x), // Alternatively the following command can be used to make a shallow copy of an array "Array.from(dataPath)" - Source: https://www.freecodecamp.org/news/how-to-clone-an-array-in-javascript-1d3183468f6a/
+            folderPath: folderPath.map((x) => x), // Array.from(folderPath)
             children: []
           };
 
@@ -291,15 +294,13 @@ Improving loading times:
         console.log(node.model.text + ' clicked !')
 
         // Emptying the array via this method instead of fileTree = [] because of above mentioned reasons
-        while (this.fileTree.length > 0) {
-            this.fileTree.pop();
-        }
         while (tempPath.length > 0) {
             tempPath.pop();
         }
 
         // Here the full path of the clicked folder has to be passed to the sliceTree() function. The dataPath array represents the path of the parent folder. Hence the index of the clicked folder and the string "children" has to be pushed to dataPath befor passing it on
-        tempPath = Array.from(node.model.dataPath)
+        // tempPath = Array.from(node.model.dataPath)
+        tempPath = node.model.dataPath.map((x) => x),
 
         await this.getIndex(dataTree, tempPath, node.model.id)
 
