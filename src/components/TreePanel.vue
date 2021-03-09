@@ -51,7 +51,7 @@ Improving loading times:
       </div>
     </div>
     <div class="column folderPanel">
-      <FolderPanel @push-clicked="push" :fileTreeProp="fileTree" :showProp="show" /> <!-- This passes the dataTree as the variable treeStructure down to the tree component (which is a child of this component) - Source: https://www.smashingmagazine.com/2020/01/data-components-vue-js/#propos-share-data-parent-child-->
+      <FolderPanel @push-clicked="push" :rootFileTreeProp="rootFileTree" :showProp="show" /> <!-- This passes the dataTree as the variable treeStructure down to the tree component (which is a child of this component) - Source: https://www.smashingmagazine.com/2020/01/data-components-vue-js/#propos-share-data-parent-child-->
     </div>
   </div>
 </template>
@@ -66,6 +66,8 @@ Improving loading times:
   let folder;
   let dataTree = [];
   let fileTree = [];
+  let rootFileTree = [];
+  let subFileTree = [];
   let folderTree = [];
   let show = false;
   let id = 0;
@@ -84,6 +86,7 @@ Improving loading times:
       return { // returns a global variable which can be passed through to child components and the template above
         msg: 'Blankscape',
         fileTree,
+        rootFileTree,
         folderTree,
         show,
         /* ASYNC LOADING:
@@ -127,12 +130,12 @@ Improving loading times:
         while (folderTree.length > 0) {
             folderTree.pop();
         }
-        while (this.fileTree.length > 0) {
-            this.fileTree.pop();
+        while (fileTree.length > 0) {
+            fileTree.pop();
         }
-
-        // dataTree = [];
-        // folderTree = [];
+        while (rootFileTree.length > 0) {
+            rootFileTree.pop();
+        }
 
         folder = await window.showDirectoryPicker();
         await this.getFiles(folder);
@@ -142,7 +145,7 @@ Improving loading times:
 
       },
 
-      async getFiles(folder, parentId = null, dataPath = [], folderPath = [], newDataPath = []) {
+      async getFiles(folder, /* parentId = null, */ dataPath = [], folderPath = [], systemPath = ["#"]) {
 
         // Files and folders come alphabetically from API not sorted by files or folders
 
@@ -161,9 +164,10 @@ Improving loading times:
             // selected: "false",
             disabled: "true",
             // loading: "false",
-            parent: parentId ?? '#',
+            // parent: parentId ?? '#',
             dataPath: dataPath.map((x) => x), // Alternatively the following command can be used to make a shallow copy of an array "Array.from(dataPath)" - Source: https://www.freecodecamp.org/news/how-to-clone-an-array-in-javascript-1d3183468f6a/
-            folderPath: folderPath.map((x) => x), // Array.from(folderPath)
+            systemPath: systemPath.join('/'), // With the command join the systemPath array is transformed into a string and combined with the seperator '/'
+            obj: "file",
             children: []
           };
           let dirDataObj = {
@@ -175,9 +179,11 @@ Improving loading times:
             // selected: "false",
             // disabled: "false",
             // loading: "false",
-            parent: parentId ?? '#',
+            // parent: parentId ?? '#',
             dataPath: dataPath.map((x) => x), // Alternatively the following command can be used to make a shallow copy of an array "Array.from(dataPath)" - Source: https://www.freecodecamp.org/news/how-to-clone-an-array-in-javascript-1d3183468f6a/
             folderPath: folderPath.map((x) => x), // Array.from(folderPath)
+            systemPath: systemPath.join('/'), // With the command join the systemPath array is transformed into a string and combined with the seperator '/'
+            obj: "directory",
             children: []
           };
           let dirFolderObj = { // Even if this object would be out of the same structre as dirDataObj, there have to be two seperate objects for the function: "await this.assign(dataTree, dataPath, dirDataObj)" & "await this.assign(folderTree, folderPath, dirFolderObj)" otherwise it strangly adds multiple instances of teh object to the folderTree array. No idea why!
@@ -189,9 +195,11 @@ Improving loading times:
             // selected: "false",
             // disabled: "false",
             // loading: "false",
-            parent: parentId ?? '#',
+            // parent: parentId ?? '#',
             dataPath: dataPath.map((x) => x), // Alternatively the following command can be used to make a shallow copy of an array "Array.from(dataPath)" - Source: https://www.freecodecamp.org/news/how-to-clone-an-array-in-javascript-1d3183468f6a/
             folderPath: folderPath.map((x) => x), // Array.from(folderPath)
+            systemPath: systemPath.join('/'), // With the command join the systemPath array is transformed into a string and combined with the seperator '/'
+            obj: "directory",
             children: []
           };
 
@@ -205,24 +213,28 @@ Improving loading times:
 
             // Get index of the above added directory in the dataTree array
             await this.getIndex(dataTree, dataPath, id)
-            // Creating the path of the above added directory in the dataTree array where in the below nested .getFiles() function deeper laying files and folders can be added
-            await this.moveDown(dataPath)
+            // Creating the path of the above added directory in the dataTree array where in the below nested .getFiles() function deeper laying folders can be added
+            await this.moveArrayPathDown(dataPath)
 
-            //Get index of the above added directory in the folderTree array
+            // Get index of the above added directory in the folderTree array
             await this.getIndex(folderTree, folderPath, id)
             // Creating the path of the above added directory in the folderTree array where in the below nested .getFiles() function deeper laying folders can be added
-            await this.moveDown(folderPath)
+            await this.moveArrayPathDown(folderPath)
+
+            // Creating the human readable path of the above added directory
+            await this.moveSystemPathDown(systemPath, entry.name)
 
             // Going deeper in the folder structure by opening another directory by accessing this function again (nested)
             // Therefore updating the array to pass the current tree path to the assign function later
-            await this.getFiles(entry, id, dataPath, folderPath, newDataPath)
+            await this.getFiles(entry, /* id,  */ dataPath, folderPath, systemPath)
           }
         }
         
         // When reaching this part of the function the deeper laying folder structures has been finished processing
-        // Therefore updating the array to move up one folder in the path (if not already on the root level - which is considered within the moveUp function)
-        await this.moveUp(dataPath)
-        await this.moveUp(folderPath)
+        // Therefore updating the array to move up one folder in the path (if not already on the root level - which is considered within the moveArrayPathUp function)
+        await this.moveArrayPathUp(dataPath)
+        await this.moveArrayPathUp(folderPath)
+        await this.moveSystemPathUp(systemPath)
       },
 
       async assign(obj, keyPath, value) { // Source: https://stackoverflow.com/questions/5484673/javascript-how-to-dynamically-create-nested-objects-using-object-names-given-by
@@ -265,17 +277,31 @@ Improving loading times:
         }
       },
 
-      async moveDown(path) {
+      async moveArrayPathDown(path) {
             path.push(index); // parentIndex = 0 is the initial state when the function is first run (hence at this part the first directory is opened)
             path.push('children');
       },
 
-      async moveUp(path) {
+      async moveSystemPathDown(path, entryName) {
+            path.push(entryName);
+      },
+
+      async moveArrayPathUp(path) {
         let arrayLength = path.length
 
         // The path.length cannot be negative, hence negative values do not have to be considered ()
         if (arrayLength > 0) {
           let newArrayLength = arrayLength - 2
+          path.length = newArrayLength
+        }
+      },
+
+      async moveSystemPathUp(path) {
+        let arrayLength = path.length
+
+        // The path.length cannot be negative, hence negative values do not have to be considered ()
+        if (arrayLength > 0) {
+          let newArrayLength = arrayLength - 1
           path.length = newArrayLength
         }
       },
@@ -290,14 +316,19 @@ Improving loading times:
       */
 
       async itemClick (node) { // Source: https://github.com/zdy1988/vue-jstree
-        console.log(node.model.text + ' clicked !')
-
-        let tempPath = []
-        // Emptying the array tempPath is not necessary because it is defined here and discarded after finishing this function. Otherwise, if declared globally it has to be emptied via the method from above
+        // console.log(node.model.text + ' clicked !')
+       
+        while (fileTree.length > 0) { // The fileTree array is completely reassigning within the function sliceTree(). Hence, it is not necessary to empty the array beforehand. It´s done here out of consistency
+            fileTree.pop();
+        }
+        while (rootFileTree.length > 0) { // The rootFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
+            rootFileTree.pop();
+        }
+        
+        let tempPath = [] // Emptying the array tempPath is not necessary because it is defined here and discarded after finishing this function. Otherwise, if declared globally it has to be emptied via the method from above
         
         // Here the full path of the clicked folder has to be passed to the sliceTree() function. The dataPath array represents the path of the parent folder. Hence the index of the clicked folder and the string "children" has to be pushed to dataPath befor passing it on
-        // tempPath = Array.from(node.model.dataPath)
-        tempPath = node.model.dataPath.map((x) => x),
+        tempPath = node.model.dataPath.map((x) => x), // Alternative command for a shallow array copy: tempPath = Array.from(node.model.dataPath)
 
         await this.getIndex(dataTree, tempPath, node.model.id)
 
@@ -306,11 +337,14 @@ Improving loading times:
 
         await this.sliceTree(dataTree, tempPath)
 
-        /* ToDo´s:
-              Combine root level files in one array
-              Combine all files of subfolder in their own subfolder array
-        */
+        // Combining all the root files in the rootFileTree array
+        this.getRootFiles()
         
+
+        /* ToDo:
+          Combining all files of subfolders in their specific subfolder array
+        */
+
       },
 
       async sliceTree(obj, keyPath) {
@@ -318,7 +352,7 @@ Improving loading times:
         let keyPathLength = keyPath.length
 
         if (keyPathLength < 2) {
-          this.fileTree = obj.slice(0)
+          fileTree = obj.slice(0)
         }
         else {
           let lastKeyIndex = keyPath.length - 1;
@@ -329,8 +363,20 @@ Improving loading times:
             }
             obj = obj[key];
           }
-          this.fileTree = obj[keyPath[lastKeyIndex]].slice(0)
+          fileTree = obj[keyPath[lastKeyIndex]].slice(0)
         }
+      },
+
+      async getRootFiles() {
+        // this.fileTree.forEach(item => console.log(item.text)); // Below function can also be achieved with this line. However, with the arrow function it is a little less intuitive when doing a lot of stuff within the function (Source: https://stackoverflow.com/questions/3010840/loop-through-an-array-in-javascript)
+        fileTree.forEach(function (entry) {
+          if (entry.obj === "file") {
+            rootFileTree.push(entry)
+          }
+          else if (entry.obj === "directory") {
+            console.log(subFileTree)
+          }
+        });
       },
 
       keyDown: function () {
