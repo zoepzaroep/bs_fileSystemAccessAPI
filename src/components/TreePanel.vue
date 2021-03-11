@@ -46,17 +46,32 @@ Improving loading times:
       <div>
         <!-- Funny enough: adding the v-if to the jstree fixes another issue. When the tree is continously rendered while the dataTree array is generated, selecting a file/folder in the tree afterwards does not automatically select all children files/folder. When only loading the tree after fully creating the tree this does work however -->
         <!-- The v-jstree component must be assigned another class otherwise the component somehow bugs and presumably applies the above mentioned class a second time hence shrinks down even further. This can be circumvented by assigning a special class to the v-jstree component which uses the whole width of the div and disables overflow. Result, the tree places itself perfectly in the div without overflowing -->
-        <v-jstree v-if="show" class="jstree" ref="tree" :data="folderTree" @item-click="itemClick"></v-jstree>
+        <v-jstree
+          v-if="show"
+          class="jstree"
+          ref="tree"
+          :data="folderTree"
+          @item-click="itemClick">
+        </v-jstree>
         <!-- the "whole-row" (marking the whole row when selecting an entry) is disabled because it brings a bug where subfolders are not marked at all when selected. It does work for root level entries however -->
         <!-- ASYNC LOADING:
         <v-jstree v-if="show" class="column jstree" ref="tree" :data="asyncData" :async="loadData" show-checkbox multiple allow-batch whole-row @item-click="itemClick"></v-jstree> -->
       </div>
       <div>
-        <v-treeview :items="items"></v-treeview>
+        <v-treeview
+          v-if="show"
+          open-all
+          dense
+          :items="folderTree"
+          activatable
+          hoverable
+          @update:active="test">
+        </v-treeview>
+        <!-- v-if is necessary otherwise "open-all" does not work because the files cannot load during rendering -->
       </div>
     </div>
     <div class="column folderPanel">
-      <FolderPanel @push-clicked="push" @item-clicked="itemClick" :rootFileTreeProp="rootFileTree" :subFileTreeProp="subFileTree" :folderNameProp="folderName" :showProp="show" /> <!-- This passes the dataTree as the variable treeStructure down to the tree component (which is a child of this component) - Source: https://www.smashingmagazine.com/2020/01/data-components-vue-js/#propos-share-data-parent-child-->
+      <FolderPanel @push-clicked="push" @item-clicked="test" :rootFileTreeProp="rootFileTree" :subFileTreeProp="subFileTree" :folderNameProp="folderName" :showProp="show" /> <!-- This passes the dataTree as the variable treeStructure down to the tree component (which is a child of this component) - Source: https://www.smashingmagazine.com/2020/01/data-components-vue-js/#propos-share-data-parent-child-->
     </div>
   </div>
 </template>
@@ -103,78 +118,6 @@ Improving loading times:
           resolve(folderTree)
         },
         */
-        items: [
-          {
-            id: 1,
-            name: 'Applications :',
-            children: [
-              { id: 2, name: 'Calendar : app' },
-              { id: 3, name: 'Chrome : app' },
-              { id: 4, name: 'Webstorm : app' },
-            ],
-          },
-          {
-            id: 5,
-            name: 'Documents :',
-            children: [
-              {
-                id: 6,
-                name: 'vuetify :',
-                children: [
-                  {
-                    id: 7,
-                    name: 'src :',
-                    children: [
-                      { id: 8, name: 'index : ts' },
-                      { id: 9, name: 'bootstrap : ts' },
-                    ],
-                  },
-                ],
-              },
-              {
-                id: 10,
-                name: 'material2 :',
-                children: [
-                  {
-                    id: 11,
-                    name: 'src :',
-                    children: [
-                      { id: 12, name: 'v-btn : ts' },
-                      { id: 13, name: 'v-card : ts' },
-                      { id: 14, name: 'v-window : ts' },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            id: 15,
-            name: 'Downloads :',
-            children: [
-              { id: 16, name: 'October : pdf' },
-              { id: 17, name: 'November : pdf' },
-              { id: 18, name: 'Tutorial : html' },
-            ],
-          },
-          {
-            id: 19,
-            name: 'Videos :',
-            children: [
-              {
-                id: 20,
-                name: 'Tutorials :',
-                children: [
-                  { id: 21, name: 'Basic layouts : mp4' },
-                  { id: 22, name: 'Advanced techniques : mp4' },
-                  { id: 23, name: 'All about app : dir' },
-                ],
-              },
-              { id: 24, name: 'Intro : mov' },
-              { id: 25, name: 'Conference introduction : avi' },
-            ],
-          },
-        ],
       }
     },
 
@@ -243,6 +186,7 @@ Improving loading times:
           let fileObj = { // Array/Object structure: https://zdy1988.github.io/vue-jstree/
             id: id,
             text: entry.name,
+            name: entry.name,
             value: "",
             icon: "",
             opened: "true",
@@ -258,6 +202,7 @@ Improving loading times:
           let dirDataObj = {
             id: id,
             text: entry.name,
+            name: entry.name,
             value: "",
             icon: "",
             opened: "true",
@@ -274,6 +219,7 @@ Improving loading times:
           let dirFolderObj = { // Even if this object would be out of the same structre as dirDataObj, there have to be two seperate objects for the function: "await this.assign(dataTree, dataPath, dirDataObj)" & "await this.assign(folderTree, folderPath, dirFolderObj)" otherwise it strangly adds multiple instances of teh object to the folderTree array. No idea why!
             id: id,
             text: entry.name,
+            name: entry.name,
             value: "",
             icon: "",
             opened: "true",
@@ -402,7 +348,6 @@ Improving loading times:
 
       async itemClick (node) { // Source: https://github.com/zdy1988/vue-jstree
         console.log(node.model.text + ' clicked !')
-        console.log('hi')
         this.folderName = node.model.text
        
         while (fileTree.length > 0) { // The fileTree array is completely reassigning within the function sliceTree(). Hence, it is not necessary to empty the array beforehand. It´s done here out of consistency
@@ -483,6 +428,10 @@ Improving loading times:
         }
       },
 
+      async test() {
+        console.log('clicked')
+      },
+
       keyDown: function () {
         const activeElement = document.getElementsByClassName('active')[0]
         if (activeElement && !isNaN(event.key) && event.key > 0) {
@@ -528,8 +477,8 @@ Improving loading times:
 
 .jstree {
   width: 100%; /* 100% of the 25% (see .tree) of the whole window */
-  max-height: calc(100vh - 121px); /* This makes the jstree exactly as tall as the window so the horizontal scroll bar is still visible */
-  min-height: calc(100vh - 121px);
+  max-height: calc((100vh - 157px)/2); /* This makes the jstree exactly as tall as the window so the horizontal scroll bar is still visible*/
+  /* min-height: calc((100vh - 157px)/2); */
   overflow: auto; /* overflow: hidden completely hides it, overflow: auto adds a scrollbar if needed */
 }
 

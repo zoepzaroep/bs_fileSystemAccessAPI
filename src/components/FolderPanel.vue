@@ -10,13 +10,53 @@
       </div>
       <div class="header" v-if="showProp">
         Files in the folder "{{folderNameProp}}":
-        <v-jstree v-if="showProp" class="jstree" ref="tree" :data="this.$props.rootFileTreeProp" show-checkbox multiple whole-row @item-click="$emit('item-clicked')"></v-jstree>
+        <v-jstree
+          v-if="showProp"
+          class="jstree"
+          ref="tree"
+          :data="this.$props.rootFileTreeProp"
+          show-checkbox multiple whole-row
+          @item-click="$emit('item-clicked')">
+        </v-jstree>
         <!-- ToDo: Emit an itemClick event to the parent from this fileTree -->
       </div>
       <div class="header" v-if="showProp">
         Files in the subfolders of "{{folderNameProp}}":
-        <v-jstree v-if="showProp" class="jstree" ref="tree" :data="this.$props.subFileTreeProp" show-checkbox multiple whole-row @item-click="$emit('item-clicked')"></v-jstree>
+        <v-jstree
+          v-if="showProp"
+          class="jstree"
+          ref="tree"
+          :data="this.$props.subFileTreeProp"
+          show-checkbox multiple whole-row
+          @item-click="$emit('item-clicked')">
+        </v-jstree>
         <!-- ToDo: Emit an itemClick event to the parent from this fileTree -->
+      </div>
+      <div class="header" v-if="showProp">
+        Files in the folder "{{folderNameProp}}":
+        <v-treeview
+          v-if="showProp"
+          open-all
+          dense
+          :items="this.$props.rootFileTreeProp"
+          activatable
+          hoverable
+          selectable
+          @update:active="$emit('item-clicked')">
+        </v-treeview>
+      </div>
+      <div class="header" v-if="showProp">
+        Files in the subfolders of "{{folderNameProp}}":
+        <v-treeview
+          v-if="showProp"
+          open-all
+          dense
+          :items="this.$props.subFileTreeProp"
+          activatable
+          hoverable
+          selectable
+          @update:active="$emit('item-clicked')">
+        </v-treeview>
       </div>
     </div>
     <div class="column filePanel">
@@ -75,7 +115,7 @@
 
 .jstree {
   width: 100%;
-  max-height: calc((100vh - 157px)/2); /* This makes the jstree exactly as tall as the window so the horizontal scroll bar is still visible*/
+  max-height: calc((100vh - 157px)/4); /* This makes the jstree exactly as tall as the window so the horizontal scroll bar is still visible*/
   /* min-height: calc((100vh - 157px)/2); */
   overflow: auto; /* overflow: hidden completely hides it, overflow: auto adds a scrollbar if needed */
 }
