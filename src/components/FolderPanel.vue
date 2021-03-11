@@ -15,8 +15,7 @@
           class="jstree"
           ref="tree"
           :data="this.$props.rootFileTreeProp"
-          show-checkbox multiple whole-row
-          @item-click="$emit('item-clicked')">
+          show-checkbox multiple whole-row>
         </v-jstree>
         <!-- ToDo: Emit an itemClick event to the parent from this fileTree -->
       </div>
@@ -27,12 +26,11 @@
           class="jstree"
           ref="tree"
           :data="this.$props.subFileTreeProp"
-          show-checkbox multiple whole-row
-          @item-click="$emit('item-clicked')">
+          show-checkbox multiple whole-row>
         </v-jstree>
         <!-- ToDo: Emit an itemClick event to the parent from this fileTree -->
       </div>
-      <div class="header" v-if="showProp">
+      <!-- <div class="header" v-if="showProp">
         Files in the folder "{{folderNameProp}}":
         <v-treeview
           v-if="showProp"
@@ -57,7 +55,7 @@
           selectable
           @update:active="$emit('item-clicked')">
         </v-treeview>
-      </div>
+      </div> -->
     </div>
     <div class="column filePanel">
       <FilePanel />

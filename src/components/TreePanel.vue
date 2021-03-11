@@ -1,4 +1,10 @@
 /*
+ToDo:
+Combine the TreePanel and the FolderPanel to circumvent the issues with the different trees accessing the parent data.
+Where the child trees of the FolderPanel cannot edit (select highlight etc.) the parents dataTree directly.
+Not even with $emit
+
+
 For conversion to async v-jstree loading see the following code snippets:
   template:
     <v-jstree v-if="show" class="column jstree" ref="tree" :data="asyncData" :async="loadData" show-checkbox multiple allow-batch whole-row @item-click="itemClick"></v-jstree>
@@ -42,6 +48,7 @@ Improving loading times:
         <button v-on:click="saveFile()">Save</button>
         <button v-on:click="openFolder()">Open Folder</button>
         <button v-on:click="getRootFiles()">Welcome Screen</button>
+        <button v-on:click="testStore()">Test Vuex</button>
       </div>
       <div>
         <!-- Funny enough: adding the v-if to the jstree fixes another issue. When the tree is continously rendered while the dataTree array is generated, selecting a file/folder in the tree afterwards does not automatically select all children files/folder. When only loading the tree after fully creating the tree this does work however -->
@@ -56,22 +63,20 @@ Improving loading times:
         <!-- the "whole-row" (marking the whole row when selecting an entry) is disabled because it brings a bug where subfolders are not marked at all when selected. It does work for root level entries however -->
         <!-- ASYNC LOADING:
         <v-jstree v-if="show" class="column jstree" ref="tree" :data="asyncData" :async="loadData" show-checkbox multiple allow-batch whole-row @item-click="itemClick"></v-jstree> -->
-      </div>
-      <div>
-        <v-treeview
+        
+        <!-- <v-treeview
           v-if="show"
           open-all
           dense
           :items="folderTree"
           activatable
-          hoverable
-          @update:active="test">
-        </v-treeview>
+          hoverable>
+        </v-treeview> -->
         <!-- v-if is necessary otherwise "open-all" does not work because the files cannot load during rendering -->
       </div>
     </div>
     <div class="column folderPanel">
-      <FolderPanel @push-clicked="push" @item-clicked="test" :rootFileTreeProp="rootFileTree" :subFileTreeProp="subFileTree" :folderNameProp="folderName" :showProp="show" /> <!-- This passes the dataTree as the variable treeStructure down to the tree component (which is a child of this component) - Source: https://www.smashingmagazine.com/2020/01/data-components-vue-js/#propos-share-data-parent-child-->
+      <FolderPanel @push-clicked="push" :rootFileTreeProp="rootFileTree" :subFileTreeProp="subFileTree" :folderNameProp="folderName" :showProp="show" /> <!-- This passes the dataTree as the variable treeStructure down to the tree component (which is a child of this component) - Source: https://www.smashingmagazine.com/2020/01/data-components-vue-js/#propos-share-data-parent-child-->
     </div>
   </div>
 </template>
@@ -112,6 +117,7 @@ Improving loading times:
         folderTree,
         folderName,
         show,
+        storeArray: store.state.storeArray,
         /* ASYNC LOADING:
         asyncData: [], //only a placeholder variabel requiered by the v-jstree component
         loadData: function (oriNode, resolve) {
@@ -286,7 +292,6 @@ Improving loading times:
             obj = obj[key];
           }
           obj[keyPath[lastKeyIndex]].push(value);
-          this.$store.commit('push', obj[keyPath[lastKeyIndex]], value)
         }
       },
 
@@ -430,11 +435,9 @@ Improving loading times:
         }
       },
 
-      async test() {
-        console.log('clicked')
-        // this.$store.commit('increment')
-        // this.$store.commit('passArray', {id: 1, path: 2})
-        console.log(store.state.storeArray)
+      async testStore() {
+        this.$store.commit('increment')
+        console.log(store.state.count)
       },
 
       keyDown: function () {
