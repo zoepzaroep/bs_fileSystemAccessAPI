@@ -41,17 +41,19 @@ Improving loading times:
         <button v-on:click="openFile()">Open</button>
         <button v-on:click="saveFile()">Save</button>
         <button v-on:click="openFolder()">Open Folder</button>
+        <button v-on:click="getRootFiles()">Welcome Screen</button>
       </div>
       <div>
         <!-- Funny enough: adding the v-if to the jstree fixes another issue. When the tree is continously rendered while the dataTree array is generated, selecting a file/folder in the tree afterwards does not automatically select all children files/folder. When only loading the tree after fully creating the tree this does work however -->
         <!-- The v-jstree component must be assigned another class otherwise the component somehow bugs and presumably applies the above mentioned class a second time hence shrinks down even further. This can be circumvented by assigning a special class to the v-jstree component which uses the whole width of the div and disables overflow. Result, the tree places itself perfectly in the div without overflowing -->
-        <v-jstree v-if="show" class="jstree" ref="tree" :data="folderTree" show-checkbox multiple allow-batch whole-row @item-click="itemClick"></v-jstree>
+        <v-jstree v-if="show" class="jstree" ref="tree" :data="folderTree" @item-click="itemClick"></v-jstree>
+        <!-- the "whole-row" (marking the whole row when selecting an entry) is disabled because it brings a bug where subfolders are not marked at all when selected. It does work for root level entries however -->
         <!-- ASYNC LOADING:
         <v-jstree v-if="show" class="column jstree" ref="tree" :data="asyncData" :async="loadData" show-checkbox multiple allow-batch whole-row @item-click="itemClick"></v-jstree> -->
       </div>
     </div>
     <div class="column folderPanel">
-      <FolderPanel @push-clicked="push" :rootFileTreeProp="rootFileTree" :showProp="show" /> <!-- This passes the dataTree as the variable treeStructure down to the tree component (which is a child of this component) - Source: https://www.smashingmagazine.com/2020/01/data-components-vue-js/#propos-share-data-parent-child-->
+      <FolderPanel @push-clicked="push" @item-clicked="itemClick" :rootFileTreeProp="rootFileTree" :subFileTreeProp="subFileTree" :folderNameProp="folderName" :showProp="show" /> <!-- This passes the dataTree as the variable treeStructure down to the tree component (which is a child of this component) - Source: https://www.smashingmagazine.com/2020/01/data-components-vue-js/#propos-share-data-parent-child-->
     </div>
   </div>
 </template>
@@ -69,6 +71,7 @@ Improving loading times:
   let rootFileTree = [];
   let subFileTree = [];
   let folderTree = [];
+  let folderName = "#";
   let show = false;
   let id = 0;
   let key;
@@ -84,10 +87,11 @@ Improving loading times:
 
     data () {
       return { // returns a global variable which can be passed through to child components and the template above
-        msg: 'Blankscape',
         fileTree,
         rootFileTree,
+        subFileTree,
         folderTree,
+        folderName,
         show,
         /* ASYNC LOADING:
         asyncData: [], //only a placeholder variabel requiered by the v-jstree component
@@ -136,10 +140,16 @@ Improving loading times:
         while (rootFileTree.length > 0) {
             rootFileTree.pop();
         }
+        while (subFileTree.length > 0) {
+            subFileTree.pop();
+        }
+
+        folderName = "#"
 
         folder = await window.showDirectoryPicker();
         await this.getFiles(folder);
-        
+        await this.getRootFiles()
+
         this.show = true
         console.log(dataTree)
 
@@ -316,13 +326,18 @@ Improving loading times:
       */
 
       async itemClick (node) { // Source: https://github.com/zdy1988/vue-jstree
-        // console.log(node.model.text + ' clicked !')
+        console.log(node.model.text + ' clicked !')
+        console.log('hi')
+        this.folderName = node.model.text
        
         while (fileTree.length > 0) { // The fileTree array is completely reassigning within the function sliceTree(). Hence, it is not necessary to empty the array beforehand. It´s done here out of consistency
             fileTree.pop();
         }
         while (rootFileTree.length > 0) { // The rootFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
             rootFileTree.pop();
+        }
+        while (subFileTree.length > 0) { // The subFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
+            subFileTree.pop();
         }
         
         let tempPath = [] // Emptying the array tempPath is not necessary because it is defined here and discarded after finishing this function. Otherwise, if declared globally it has to be emptied via the method from above
@@ -335,19 +350,13 @@ Improving loading times:
         tempPath.push(index)
         tempPath.push('children')
 
-        await this.sliceTree(dataTree, tempPath)
+        await this.sliceDataTree(dataTree, tempPath)
 
-        // Combining all the root files in the rootFileTree array
-        this.getRootFiles()
-        
-
-        /* ToDo:
-          Combining all files of subfolders in their specific subfolder array
-        */
-
+        // Adding all the files (that are on root level of the clicked folder) to the rootFileTree array and combining all the files in subfolders in the subFileTree 
+        this.getSubFiles(fileTree, node.model.systemPath, node.model.text)
       },
 
-      async sliceTree(obj, keyPath) {
+      async sliceDataTree(obj, keyPath) {
         
         let keyPathLength = keyPath.length
 
@@ -368,15 +377,35 @@ Improving loading times:
       },
 
       async getRootFiles() {
+        while (rootFileTree.length > 0) {
+            rootFileTree.pop();
+        }
+        while (subFileTree.length > 0) {
+            subFileTree.pop();
+        }
         // this.fileTree.forEach(item => console.log(item.text)); // Below function can also be achieved with this line. However, with the arrow function it is a little less intuitive when doing a lot of stuff within the function (Source: https://stackoverflow.com/questions/3010840/loop-through-an-array-in-javascript)
-        fileTree.forEach(function (entry) {
+        dataTree.forEach(function (entry) { // with the forEach command the root level of the array is iterated. Not nested arrays!
           if (entry.obj === "file") {
             rootFileTree.push(entry)
           }
-          else if (entry.obj === "directory") {
-            console.log(subFileTree)
-          }
         });
+      },
+
+      async getSubFiles(tree, path, parent) {
+        // The "dataTree.forEach(function (entry) {}"" from above had to be rewritten as a "for await" function to be able to use an "await" function within the function call
+        for await (const entry of tree) {
+          if (entry.obj === "file") {
+            if (entry.systemPath === path + "/" + parent) {
+              rootFileTree.push(entry)
+            }
+            else {
+              subFileTree.push(entry)
+            }
+          }
+          else if (entry.obj === "directory") {
+            await this.getSubFiles(entry.children)
+          }
+        }
       },
 
       keyDown: function () {
