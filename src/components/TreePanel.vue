@@ -103,7 +103,7 @@ Improving loading times:
           resolve(folderTree)
         },
         */
-       items: [
+        items: [
           {
             id: 1,
             name: 'Applications :',
