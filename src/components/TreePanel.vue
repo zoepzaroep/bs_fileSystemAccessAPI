@@ -80,6 +80,7 @@ Improving loading times:
 
   import VJstree from 'vue-jstree'
   import FolderPanel from '@/components/FolderPanel.vue'
+  import store from "@/store";
 
   // Declaring a varibale here makes it available for all methods below
   let fileHandle;
@@ -285,6 +286,7 @@ Improving loading times:
             obj = obj[key];
           }
           obj[keyPath[lastKeyIndex]].push(value);
+          this.$store.commit('push', obj[keyPath[lastKeyIndex]], value)
         }
       },
 
@@ -430,6 +432,9 @@ Improving loading times:
 
       async test() {
         console.log('clicked')
+        // this.$store.commit('increment')
+        // this.$store.commit('passArray', {id: 1, path: 2})
+        console.log(store.state.storeArray)
       },
 
       keyDown: function () {
