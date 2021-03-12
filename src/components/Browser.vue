@@ -1,42 +1,3 @@
-/*
-ToDo:
-Combine the TreePanel and the FolderPanel to circumvent the issues with the different trees accessing the parent data.
-Where the child trees of the FolderPanel cannot edit (select highlight etc.) the parents dataTree directly.
-Not even with $emit
-
-
-For conversion to async v-jstree loading see the following code snippets:
-  template:
-    <v-jstree v-if="show" class="column jstree" ref="tree" :data="asyncData" :async="loadData" show-checkbox multiple allow-batch whole-row @item-click="itemClick"></v-jstree>
-  script:
-    data () {
-        return {
-          asyncData: [], //only a placeholder variabel requiered by the v-jstree component
-          loadData: function (oriNode, resolve) {
-            oriNode.data.id ? oriNode.data.id : 0 //No idea why this is needed - what the hell is oriNode
-            resolve(folderTree)
-        },
-      }
-    },
-    methods: {
-      refreshNode: function () {
-        this.asyncData = [
-            this.$refs.tree.initializeLoading()
-        ]
-        this.$refs.tree.handleAsyncLoad(this.asyncData, this.$refs.tree)
-      },
-    }
-
-Issues with async loading:
-  Somehow when the tree is continously rendered while the dataTree array is generated, selecting a file/folder in the tree afterwards does not automatically select all children files/folder.
-  Without async this can be cirumvented by only rendering the tree after the array is finished via an v-if statement in the template
-
-Improving loading times:
-  Loading times of the v-jstree can be drastically improved by only rendering the v-jstree after creating the array is finished.
-  Loading the v-jstree while the array is filled with the data from the File System API takes way longer
-  Furthermore loading times can be improved by not loading all the nested objects directly but first loading the root level, and then loading all nested objects while the root level is collapsed in the background - this however rewuieres async loading!
-*/
-
 <template>
   <div>
     <div class="column tree">
@@ -61,22 +22,36 @@ Improving loading times:
           @item-click="itemClick">
         </v-jstree>
         <!-- the "whole-row" (marking the whole row when selecting an entry) is disabled because it brings a bug where subfolders are not marked at all when selected. It does work for root level entries however -->
-        <!-- ASYNC LOADING:
-        <v-jstree v-if="show" class="column jstree" ref="tree" :data="asyncData" :async="loadData" show-checkbox multiple allow-batch whole-row @item-click="itemClick"></v-jstree> -->
-        
-        <!-- <v-treeview
-          v-if="show"
-          open-all
-          dense
-          :items="folderTree"
-          activatable
-          hoverable>
-        </v-treeview> -->
-        <!-- v-if is necessary otherwise "open-all" does not work because the files cannot load during rendering -->
       </div>
     </div>
-    <div class="column folderPanel">
-      <FolderPanel @push-clicked="push" :rootFileTreeProp="rootFileTree" :subFileTreeProp="subFileTree" :folderNameProp="folderName" :showProp="show" /> <!-- This passes the dataTree as the variable treeStructure down to the tree component (which is a child of this component) - Source: https://www.smashingmagazine.com/2020/01/data-components-vue-js/#propos-share-data-parent-child-->
+    <div class="column folder">
+      <div>
+        Files in the folder "{{folderName}}":
+        <v-jstree
+          v-if="show"
+          class="jstree"
+          ref="tree"
+          :data="rootFileTree"
+          show-checkbox
+          multiple>
+        </v-jstree>
+        <!-- ToDo: Emit an itemClick event to the parent from this fileTree -->
+      </div>
+      <div>
+        Files in the subfolders of "{{folderName}}":
+        <v-jstree
+          v-if="show"
+          class="jstree"
+          ref="tree"
+          :data="subFileTree"
+          show-checkbox
+          multiple>
+        </v-jstree>
+        <!-- ToDo: Emit an itemClick event to the parent from this fileTree -->
+      </div>
+    </div>
+    <div class="column file">
+      <FilePanel />
     </div>
   </div>
 </template>
@@ -84,7 +59,6 @@ Improving loading times:
 <script>
 
   import VJstree from 'vue-jstree'
-  import FolderPanel from '@/components/FolderPanel.vue'
   import store from "@/store";
 
   // Declaring a varibale here makes it available for all methods below
@@ -103,10 +77,9 @@ Improving loading times:
   let contents;
 
   export default {
-    name: 'TreePanel',
+    name: 'Browser',
     components: {
-      VJstree,     
-      FolderPanel,
+      VJstree
     },
 
     data () {
@@ -117,14 +90,6 @@ Improving loading times:
         folderTree,
         folderName,
         show,
-        storeArray: store.state.storeArray,
-        /* ASYNC LOADING:
-        asyncData: [], //only a placeholder variabel requiered by the v-jstree component
-        loadData: function (oriNode, resolve) {
-          oriNode.data.id ? oriNode.data.id : 0 //No idea why this is needed - what the hell is oriNode
-          resolve(folderTree)
-        },
-        */
       }
     },
 
@@ -151,8 +116,7 @@ Improving loading times:
         
         this.show = false
 
-        // Resetting all arrays
-        // According to the internet, this is performance wise the fastest way to truly empty an array. Funny enough, this is also the only way updating the vue-jstree works after emptying the array. The most intuitive command "dataTree = []" empties the array but somehow does not always trigger the data update of components in the template (somtimes emptying works but on re-filling update is broken again). No idea why - search the whole internet for hours for this issue
+        // Resetting all arrays: According to the internet, this is performance wise the fastest way to truly empty an array. Funny enough, this is also the only way updating the vue-jstree works after emptying the array. The most intuitive command "dataTree = []" empties the array but somehow does not always trigger the data update of components in the template (somtimes emptying works but on re-filling update is broken again). No idea why - search the whole internet for hours for this issue
         while (dataTree.length > 0) {
             dataTree.pop();
         }
@@ -172,7 +136,8 @@ Improving loading times:
         folderName = "#"
 
         folder = await window.showDirectoryPicker();
-        await this.getFiles(folder);
+        await this.getFiles(folder); // Files and folders come alphabetically from API not sorted by files or folders
+        
         await this.getRootFiles()
 
         this.show = true
@@ -181,8 +146,6 @@ Improving loading times:
       },
 
       async getFiles(folder, /* parentId = null, */ dataPath = [], folderPath = [], systemPath = ["#"]) {
-
-        // Files and folders come alphabetically from API not sorted by files or folders
 
         for await (const entry of folder.values()) {
           
@@ -193,12 +156,12 @@ Improving loading times:
           let fileObj = { // Array/Object structure: https://zdy1988.github.io/vue-jstree/
             id: id,
             text: entry.name,
-            name: entry.name,
+            // name: entry.name,
             value: "",
             icon: "",
             opened: "true",
             // selected: "false",
-            disabled: "true",
+            // disabled: "true",
             // loading: "false",
             // parent: parentId ?? '#',
             dataPath: dataPath.map((x) => x), // Alternatively the following command can be used to make a shallow copy of an array "Array.from(dataPath)" - Source: https://www.freecodecamp.org/news/how-to-clone-an-array-in-javascript-1d3183468f6a/
@@ -209,7 +172,7 @@ Improving loading times:
           let dirDataObj = {
             id: id,
             text: entry.name,
-            name: entry.name,
+            // name: entry.name,
             value: "",
             icon: "",
             opened: "true",
@@ -226,7 +189,7 @@ Improving loading times:
           let dirFolderObj = { // Even if this object would be out of the same structre as dirDataObj, there have to be two seperate objects for the function: "await this.assign(dataTree, dataPath, dirDataObj)" & "await this.assign(folderTree, folderPath, dirFolderObj)" otherwise it strangly adds multiple instances of teh object to the folderTree array. No idea why!
             id: id,
             text: entry.name,
-            name: entry.name,
+            // name: entry.name,
             value: "",
             icon: "",
             opened: "true",
@@ -262,14 +225,12 @@ Improving loading times:
             // Creating the human readable path of the above added directory
             await this.moveSystemPathDown(systemPath, entry.name)
 
-            // Going deeper in the folder structure by opening another directory by accessing this function again (nested)
-            // Therefore updating the array to pass the current tree path to the assign function later
+            // Going deeper in the folder structure by opening another directory by accessing this function again (nested). Therefore updating the array to pass the current tree path to the assign function later
             await this.getFiles(entry, /* id,  */ dataPath, folderPath, systemPath)
           }
         }
         
-        // When reaching this part of the function the deeper laying folder structures has been finished processing
-        // Therefore updating the array to move up one folder in the path (if not already on the root level - which is considered within the moveArrayPathUp function)
+        // When reaching this part of the function the deeper laying folder structures has been finished processing. Therefore updating the array to move up one folder in the path (if not already on the root level - which is considered within the moveArrayPathUp function)
         await this.moveArrayPathUp(dataPath)
         await this.moveArrayPathUp(folderPath)
         await this.moveSystemPathUp(systemPath)
@@ -327,8 +288,7 @@ Improving loading times:
       async moveArrayPathUp(path) {
         let arrayLength = path.length
 
-        // The path.length cannot be negative, hence negative values do not have to be considered ()
-        if (arrayLength > 0) {
+        if (arrayLength > 0) { // The path.length cannot be negative, hence negative values do not have to be considered
           let newArrayLength = arrayLength - 2
           path.length = newArrayLength
         }
@@ -337,21 +297,11 @@ Improving loading times:
       async moveSystemPathUp(path) {
         let arrayLength = path.length
 
-        // The path.length cannot be negative, hence negative values do not have to be considered ()
-        if (arrayLength > 0) {
+        if (arrayLength > 0) { // The path.length cannot be negative, hence negative values do not have to be considered
           let newArrayLength = arrayLength - 1
           path.length = newArrayLength
         }
       },
-
-      /* ASYNC LOADING:
-      refreshNode: function () { // refresh function for async loading of the v-jstree
-        this.asyncData = [
-            this.$refs.tree.initializeLoading()
-        ]
-        this.$refs.tree.handleAsyncLoad(this.asyncData, this.$refs.tree)
-      },
-      */
 
       async itemClick (node) { // Source: https://github.com/zdy1988/vue-jstree
         console.log(node.model.text + ' clicked !')
@@ -379,8 +329,7 @@ Improving loading times:
 
         await this.sliceDataTree(dataTree, tempPath)
 
-        // Adding all the files (that are on root level of the clicked folder) to the rootFileTree array and combining all the files in subfolders in the subFileTree 
-        this.getSubFiles(fileTree, node.model.systemPath, node.model.text)
+        this.getSubFiles(fileTree, node.model.systemPath, node.model.text) // Adding all the files (that are on root level of the clicked folder) to the rootFileTree array and combining all the files in subfolders in the subFileTree
       },
 
       async sliceDataTree(obj, keyPath) {
@@ -410,8 +359,8 @@ Improving loading times:
         while (subFileTree.length > 0) {
             subFileTree.pop();
         }
-        // this.fileTree.forEach(item => console.log(item.text)); // Below function can also be achieved with this line. However, with the arrow function it is a little less intuitive when doing a lot of stuff within the function (Source: https://stackoverflow.com/questions/3010840/loop-through-an-array-in-javascript)
-        dataTree.forEach(function (entry) { // with the forEach command the root level of the array is iterated. Not nested arrays!
+
+        dataTree.forEach(function (entry) { // with the forEach command the root level of the array is iterated. Not nested arrays! That effect can also be acchieved with "this.fileTree.forEach(item => console.log(item.text));". However, with the arrow function it is a little less intuitive when doing a lot of stuff within the function (Source: https://stackoverflow.com/questions/3010840/loop-through-an-array-in-javascript)
           if (entry.obj === "file") {
             rootFileTree.push(entry)
           }
@@ -419,8 +368,7 @@ Improving loading times:
       },
 
       async getSubFiles(tree, path, parent) {
-        // The "dataTree.forEach(function (entry) {}"" from above had to be rewritten as a "for await" function to be able to use an "await" function within the function call
-        for await (const entry of tree) {
+        for await (const entry of tree) { // The "dataTree.forEach(function (entry) {}"" from above (in "getRootFile()") had to be rewritten as a "for await" function to be able to use an "await" function within the function call
           if (entry.obj === "file") {
             if (entry.systemPath === path + "/" + parent) {
               rootFileTree.push(entry)
@@ -435,25 +383,13 @@ Improving loading times:
         }
       },
 
-      async testStore() {
+      async testStore() { // Test-function to test if the Vuex setup works
         this.$store.commit('increment')
         console.log(store.state.count)
-      },
-
-      keyDown: function () {
-        const activeElement = document.getElementsByClassName('active')[0]
-        if (activeElement && !isNaN(event.key) && event.key > 0) {
-          activeElement.innerHTML = event.key
-        }
-      },
-
-      push () {
-        console.log('emitted')
       },
     },
 
     created: function () {
-      // window.addEventListener('keydown', this.keyDown)
       window.addEventListener('keydown', e => {
         if (e.key === 's' && e.metaKey){
           e.preventDefault();
@@ -463,7 +399,7 @@ Improving loading times:
     },
 
     destroyed: function () {
-      // window.removeEventListener('keydown', this.keyDown)
+      
     }
   }
 </script>
@@ -478,6 +414,14 @@ Improving loading times:
   width: 25%; /* 25% of the whole window */
 }
 
+.folder {
+  width: 25%; /* 25% of the whole window */
+}
+
+.file {
+  width: 50%; /* 50% of the whole window */
+}
+
 .header {
   display: block; /* float: left; & width: 100%; together have the same effect */
   text-align: left;
@@ -490,14 +434,174 @@ Improving loading times:
   overflow: auto; /* overflow: hidden completely hides it, overflow: auto adds a scrollbar if needed */
 }
 
-.folderPanel {
-  width: 75%; /* 75% of the whole window */
-}
-
-/* Clear floats after the columns */
-/* .row:after {
-  content: "";
-  display: table;
-  clear: both;
-} */
 </style>
+
+
+<!--
+
+ToDo:
+
+  Combine the TreePanel and the FolderPanel to circumvent the issues with the different trees accessing the parent data.
+  Where the child trees of the FolderPanel cannot edit (select highlight etc.) the parents dataTree directly.
+  Not even with $emit
+
+
+
+ASYNC LOADING IN V-JSTREE:
+
+  Code changes:
+
+    //this.vue
+
+      <template>
+        <v-jstree
+          v-if="show"
+          class="column jstree"
+          ref="tree"
+          :data="asyncData"
+          :async="loadData"
+          show-checkbox
+          multiple
+          allow-batch
+          whole-row
+          @item-click="itemClick">
+        </v-jstree>     
+      </template>
+
+      <script>
+        data () {
+            return {
+              asyncData: [], // only a placeholder variabel requiered by the v-jstree component
+              loadData: function (oriNode, resolve) {
+                oriNode.data.id ? oriNode.data.id : 0 // No idea why this is needed - what the hell is oriNode
+                resolve(folderTree)
+            },
+          }
+        },
+        methods: {
+          refreshNode: function () {
+            this.asyncData = [
+                this.$refs.tree.initializeLoading()
+            ]
+            this.$refs.tree.handleAsyncLoad(this.asyncData, this.$refs.tree)
+          },
+        }
+      </script>
+
+
+  Issues with async loading:
+
+    Somehow when the tree is continously rendered while the dataTree array is generated, selecting a file/folder in the tree afterwards does not automatically select all children files/folder.
+    Without async this can be cirumvented by only rendering the tree after the array is finished via an v-if statement in the template
+
+
+  Improving loading times:
+
+    Loading times of the v-jstree can be drastically improved by only rendering the v-jstree after creating the array is finished.
+    Loading the v-jstree while the array is filled with the data from the File System API takes way longer
+    Furthermore loading times can be improved by not loading all the nested objects directly but first loading the root level, and then loading all nested objects while the root level is collapsed in the background - this however rewuieres async loading!
+
+
+
+USAGE OF VUETIFY-TREEVIEW INSTEAD OF V-JSTREE
+
+  Code changes:
+
+    // this.vue
+
+      <template>
+        <v-treeview
+          v-if="show" // v-if is necessary otherwise "open-all" does not work because the files cannot load during rendering
+          open-all
+          dense
+          :items="folderTree"
+          activatable
+          hoverable>
+        </v-treeview>
+      </template>
+
+      <script>
+        methods: {
+          async getFiles(folder, /* parentId = null, */ dataPath = [], folderPath = [], systemPath = ["#"]) {
+            (...)
+              // All the objects pushed into the tree array have to be equipted with a "name" see
+              let fileObj = {
+                  id: id,
+                  name: entry.name, // instead of the title
+                  value: "",
+                  icon: "",
+                  opened: "true",
+                  // selected: "false",
+                  // disabled: "true",
+                  // loading: "false",
+                  // parent: parentId ?? '#',
+                  dataPath: dataPath.map((x) => x),
+                  systemPath: systemPath.join('/'),
+                  obj: "file",
+                  children: []
+                };
+            (...)
+          },
+
+          async itemClick (node) { // Source: https://github.com/zdy1988/vue-jstree
+            // This function has to be completely rewritten. Because the call "node.model.text" is specific for the v-jstree. Vuetify´s treeview plugin works a littel bit different
+          }
+        }
+      </script>
+        
+
+
+PASSING DATA BETWEEN PARENT AND CHILD
+
+  Parent to child:
+    
+    // Parent.vue
+
+      <template>
+        <Child :variableProp="variable"/> // Pass the global variable down to the child
+      </template>
+
+      <script>
+        import Child from '@/components/Child.vue'
+
+        export default {
+          name: 'Parent',
+          components: {  
+            Child,
+          },
+
+          data () {
+            return {
+              variabel
+            }
+          }
+      </script>
+  
+    // Child.vue
+
+      <template>
+        // Access the prop in the template with the following attribute :data="this.$props.subFileTreeProp"
+      </template>
+
+      <script>
+        props: [
+          'variableProp'
+        ],
+      <script>
+
+
+  Child to parent:
+
+    // Child.vue
+
+      <template>
+        // Call an event e.g. v-on:click="$emit('emitted-call')" and emit the call
+      </template>
+
+    // Parent.vue
+    
+      <template>
+        <Child @emitted-call="function"/> // Listen for the emitted call
+      </template>
+
+-->

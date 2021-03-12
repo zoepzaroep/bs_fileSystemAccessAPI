@@ -5,7 +5,7 @@ Vue.use(Vuex);
 
 export default new Vuex.Store({
   state: {
-    count: 0,
+    count: 0, // Test-state to check if the Vuex setup works
   },
 
   getters: {
@@ -13,7 +13,7 @@ export default new Vuex.Store({
   },
 
   mutations: {
-    increment (state) {
+    increment (state) { // Test-function to test if the Vuex setup works
         state.count++
     },   
   },

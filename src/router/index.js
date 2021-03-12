@@ -2,9 +2,7 @@ import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Navigator from '@/views/Navigator'
 import Startscreen from '@/views/Startscreen'
-import TreePanel from '@/components/TreePanel'
-import FolderPanel from '@/components/FolderPanel'
-import FilePanel from '@/components/FilePanel'
+import Browser from '@/components/Browser'
 
 Vue.use(VueRouter)
 
@@ -20,18 +18,8 @@ const routes = [
     component: Navigator,
     children: [
       {
-        path: 'TreePanel', // setting the path to '' (path: '') this component will be handelt as default path
-        component: TreePanel,
-        children: [
-          {
-            path: 'FolderPanel',
-            component: FolderPanel
-          },
-          {
-            path: 'FilePanel',
-            component: FilePanel
-          },
-        ]
+        path: 'Browser', // setting the path to '' (path: '') this component will be handelt as default path
+        component: Browser,
       },
     ]
   },
