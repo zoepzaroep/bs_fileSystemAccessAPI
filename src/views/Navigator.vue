@@ -8,7 +8,7 @@
       </div>
       <div>
         <div>
-          <TreePanel />
+          <Browser />
         </div>
       </div>
   </div>
@@ -16,12 +16,12 @@
 
 <script>
 // @ is an alias to /src
-import TreePanel from '@/components/TreePanel.vue'
+import Browser from '@/components/Browser.vue'
 
 export default {
   name: 'Navigator',
   components: {
-    TreePanel,
+    Browser,
   },
   methods: {
 
