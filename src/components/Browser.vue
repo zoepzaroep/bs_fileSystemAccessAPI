@@ -21,6 +21,10 @@
           :items="folderTree"
           activatable
           hoverable>
+          <template slot="label" slot-scope="{ item }">
+            <a @click="testStore(item.name)"></a>
+            <!-- Source: https://stackoverflow.com/questions/54719453/how-to-bind-an-event-to-a-treeview-node-in-vuetify/54719701 -->
+          </template>
         </v-treeview>
         <!-- v-if is necessary otherwise "open-all" does not work because the files cannot load during rendering -->
       </div>
@@ -393,9 +397,10 @@
         }
       },
 
-      async testStore() { // Test-function to test if the Vuex setup works
+      async testStore(item) { // Test-function to test if the Vuex setup works
         this.$store.commit('increment')
         console.log(store.state.count)
+        console.log(item)
       },
     },
 
