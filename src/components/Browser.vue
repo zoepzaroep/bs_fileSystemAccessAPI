@@ -21,6 +21,9 @@
           :items="folderTree"
           activatable
           hoverable>
+          <template slot="label" slot-scope="{ item }">
+            <a @click="testStore(item)">{{ item.name }}</a>
+          </template>
         </v-treeview>
         <!-- v-if is necessary otherwise "open-all" does not work because the files cannot load during rendering -->
       </div>
@@ -396,6 +399,7 @@
       async testStore() { // Test-function to test if the Vuex setup works
         this.$store.commit('increment')
         console.log(store.state.count)
+        console.log(item.name)
       },
     },
 
