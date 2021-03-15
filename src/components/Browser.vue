@@ -400,6 +400,7 @@
       async testStore(item) { // Test-function to test if the Vuex setup works
         this.$store.commit('increment')
         console.log(store.state.count)
+        console.log(item)
         console.log(item.name)
       },
     },
