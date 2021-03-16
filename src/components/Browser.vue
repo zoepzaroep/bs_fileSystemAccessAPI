@@ -10,7 +10,7 @@
           <v-btn v-on:click="saveFile()">Save</v-btn>
           <v-btn v-on:click="openFolder()">Open Folder</v-btn>
           <v-btn v-on:click="getRootFiles()">Welcome Screen</v-btn>
-          <v-btn v-on:click="testStore()">Test Vuex</v-btn>
+          <v-btn v-on:click="test()">Test Vuex</v-btn>
         </div>
       </div>
       <div>
@@ -20,13 +20,13 @@
           dense
           :items="folderTree"
           activatable
-          hoverable>
-          <template slot="label" slot-scope="{ item }">
-            <a @click="testStore(item)">{{ item.name }}</a>
-          </template>
-          <!-- Source: https://stackoverflow.com/questions/54719453/how-to-bind-an-event-to-a-treeview-node-in-vuetify/54719701 -->
+          hoverable
+          return-object
+          @update:active="itemClick">
+          <!-- Alternative way to trigger a function call on-click is by listening for clicks on the label. This however only triggers if the label (text) is clicked diretcly not when clicked on the same row besides the text. Source: https://stackoverflow.com/questions/54719453/how-to-bind-an-event-to-a-treeview-node-in-vuetify/54719701 -->
         </v-treeview>
         <!-- v-if is necessary otherwise "open-all" does not work because the files cannot load during rendering -->
+        <!-- return-object makes the treeview return the whole object (not only the id) in events like @update. Here: the whole object is passed through to the function called by "@update:active" -->
       </div>
     </div>
     <div class="column folder">
@@ -42,7 +42,9 @@
           :items="rootFileTree"
           activatable
           selectable
-          hoverable>
+          hoverable
+          return-object
+          @update:active="readFile">
         </v-treeview>
       </div>
       <div>
@@ -54,7 +56,9 @@
           :items="subFileTree"
           activatable
           selectable
-          hoverable>
+          hoverable
+          return-object
+          @update:active="readFile">
         </v-treeview>
       </div>
     </div>
@@ -80,6 +84,7 @@
   // Declaring a varibale here makes it available for all methods below
   let fileHandle;
   let folder;
+  let files = []; // The files array is requiered to save all the FileSystemAPI fileHandlers. These fileHandlers can then be searched through and recalled to open or save the specific file
   let dataTree = [];
   let fileTree = [];
   let rootFileTree = [];
@@ -88,7 +93,7 @@
   let folderName = "#";
   let content = "";
   let show = false;
-  let id = 0;
+  let id = 1;
   let key;
   let index = 0; // The index of the array of the currently processed object
 
@@ -100,12 +105,15 @@
 
     data () {
       return { // returns a global variable which can be passed through to child components and the template above
+        dataTree,
         fileTree,
         rootFileTree,
         subFileTree,
         folderTree,
         folderName,
         show,
+        folder,
+        files,
         content
       }
     },
@@ -113,6 +121,7 @@
     methods: {
       async openFile() { // Source: https://web.dev/file-system-access/
         [fileHandle] = await window.showOpenFilePicker();
+        console.log(fileHandle)
         const file = await fileHandle.getFile();
         this.content = await file.text();
       },
@@ -121,6 +130,28 @@
         let writable = await fileHandle.createWritable();
         await writable.write(this.content);
         await writable.close();
+      },
+
+      async readFile(node) {
+        // The treeview returns the whole object of the clicked entry. Under index [0] all the object´s attributes can be called
+        if (node.length === 0) { // When de-selecting the entry in the treeview it is returning an empty array, which would lead to an error
+          console.log("entry de-selected")
+        }
+        else {
+          files.forEach(async entry => { // This function only searches by name not by unique ID, which means files of the same name but different locations both are returned
+            if (entry.name == node[0].name) {
+              const path = await this.folder.resolve(entry);
+              if (path.slice(0, path.length - 1).join() === node[0].apiPath.slice(1).join()) {
+                let file = await entry.getFile();
+                this.content = await file.text();
+              }
+            }
+          });
+        }
+      },
+
+      async writeFile() {
+
       },
 
       async openFolder() { // Source: https://www.youtube.com/watch?v=csCk4mrEmm8
@@ -146,9 +177,9 @@
 
         folderName = "#"
 
-        folder = await window.showDirectoryPicker();
-        await this.getFiles(folder); // Files and folders come alphabetically from API not sorted by files or folders
-        
+        this.folder = await window.showDirectoryPicker();
+        await this.getFiles(this.folder); // Files and folders come alphabetically from API not sorted by files or folders
+
         await this.getRootFiles()
 
         this.show = true
@@ -177,7 +208,9 @@
             // parent: parentId ?? '#',
             dataPath: dataPath.map((x) => x), // Alternatively the following command can be used to make a shallow copy of an array "Array.from(dataPath)" - Source: https://www.freecodecamp.org/news/how-to-clone-an-array-in-javascript-1d3183468f6a/
             systemPath: systemPath.join('/'), // With the command join the systemPath array is transformed into a string and combined with the seperator '/'
+            apiPath: systemPath.map((x) => x),
             obj: "file",
+            // entry: entry,
             children: []
           };
           let dirDataObj = {
@@ -195,6 +228,7 @@
             folderPath: folderPath.map((x) => x), // Array.from(folderPath)
             systemPath: systemPath.join('/'), // With the command join the systemPath array is transformed into a string and combined with the seperator '/'
             obj: "directory",
+            // entry: entry,
             children: []
           };
           let dirFolderObj = { // Even if this object would be out of the same structre as dirDataObj, there have to be two seperate objects for the function: "await this.assign(dataTree, dataPath, dirDataObj)" & "await this.assign(folderTree, folderPath, dirFolderObj)" otherwise it strangly adds multiple instances of teh object to the folderTree array. No idea why!
@@ -212,16 +246,19 @@
             folderPath: folderPath.map((x) => x), // Array.from(folderPath)
             systemPath: systemPath.join('/'), // With the command join the systemPath array is transformed into a string and combined with the seperator '/'
             obj: "directory",
+            // entry: entry,
             children: []
           };
 
           if (entry.kind === "file") {
             await this.assign(dataTree, dataPath, fileObj)
+            this.files.push(entry)
           }
           else if (entry.kind === "directory") {
             
             await this.assign(dataTree, dataPath, dirDataObj)
             await this.assign(folderTree, folderPath, dirFolderObj)
+            this.files.push(entry)
 
             // Get index of the above added directory in the dataTree array
             await this.getIndex(dataTree, dataPath, id)
@@ -315,35 +352,39 @@
       },
 
       async itemClick (node) { // Source: https://github.com/zdy1988/vue-jstree
-        
-        // This function has to be completely rewritten to work with Vuetify´s treeview ("node.model.text" is an v-jstree specific thing)
-        
-        console.log(node.model.text + ' clicked !')
-        this.folderName = node.model.text
-       
-        while (fileTree.length > 0) { // The fileTree array is completely reassigning within the function sliceTree(). Hence, it is not necessary to empty the array beforehand. It´s done here out of consistency
-            fileTree.pop();
+
+        // The treeview returns the whole object of the clicked entry. Under index [0] all the object´s attributes can be called
+        if (node.length === 0) { // When de-selecting the entry in the treeview it is returning an empty array, which would lead to an error
+          console.log("node de-selected")
         }
-        while (rootFileTree.length > 0) { // The rootFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
-            rootFileTree.pop();
+        else {
+          console.log(node[0].text + ' selected')
+          this.folderName = node[0].text
+
+          while (fileTree.length > 0) { // The fileTree array is completely reassigning within the function sliceTree(). Hence, it is not necessary to empty the array beforehand. It´s done here out of consistency
+              fileTree.pop();
+          }
+          while (rootFileTree.length > 0) { // The rootFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
+              rootFileTree.pop();
+          }
+          while (subFileTree.length > 0) { // The subFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
+              subFileTree.pop();
+          }
+          
+          let tempPath = [] // Emptying the array tempPath is not necessary because it is defined here and discarded after finishing this function. Otherwise, if declared globally it has to be emptied via the method from above
+          
+          // Here the full path of the clicked folder has to be passed to the sliceTree() function. The dataPath array represents the path of the parent folder. Hence the index of the clicked folder and the string "children" has to be pushed to dataPath befor passing it on
+          tempPath = node[0].dataPath.map((x) => x), // Alternative command for a shallow array copy: tempPath = Array.from(node.model.dataPath)
+
+          await this.getIndex(dataTree, tempPath, node[0].id)
+
+          tempPath.push(index)
+          tempPath.push('children')
+
+          await this.sliceDataTree(dataTree, tempPath)
+
+          this.getSubFiles(fileTree, node[0].systemPath, node[0].text) // Adding all the files (that are on root level of the clicked folder) to the rootFileTree array and combining all the files in subfolders in the subFileTree
         }
-        while (subFileTree.length > 0) { // The subFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
-            subFileTree.pop();
-        }
-        
-        let tempPath = [] // Emptying the array tempPath is not necessary because it is defined here and discarded after finishing this function. Otherwise, if declared globally it has to be emptied via the method from above
-        
-        // Here the full path of the clicked folder has to be passed to the sliceTree() function. The dataPath array represents the path of the parent folder. Hence the index of the clicked folder and the string "children" has to be pushed to dataPath befor passing it on
-        tempPath = node.model.dataPath.map((x) => x), // Alternative command for a shallow array copy: tempPath = Array.from(node.model.dataPath)
-
-        await this.getIndex(dataTree, tempPath, node.model.id)
-
-        tempPath.push(index)
-        tempPath.push('children')
-
-        await this.sliceDataTree(dataTree, tempPath)
-
-        this.getSubFiles(fileTree, node.model.systemPath, node.model.text) // Adding all the files (that are on root level of the clicked folder) to the rootFileTree array and combining all the files in subfolders in the subFileTree
       },
 
       async sliceDataTree(obj, keyPath) {
@@ -397,10 +438,9 @@
         }
       },
 
-      async testStore(item) { // Test-function to test if the Vuex setup works
-        this.$store.commit('increment')
+      async test() { // Test-function to test various functions
+        this.$store.commit('increment')  // test if the Vuex setup works
         console.log(store.state.count)
-        console.log(item.name)
       },
     },
 
@@ -603,32 +643,10 @@ USAGE OF V-JSTREE:
           },
 
           async itemClick (node) { // Source: https://github.com/zdy1988/vue-jstree
-            console.log(node.model.text + ' clicked !')
-            this.folderName = node.model.text
-          
-            while (fileTree.length > 0) { // The fileTree array is completely reassigning within the function sliceTree(). Hence, it is not necessary to empty the array beforehand. It´s done here out of consistency
-                fileTree.pop();
-            }
-            while (rootFileTree.length > 0) { // The rootFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
-                rootFileTree.pop();
-            }
-            while (subFileTree.length > 0) { // The subFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
-                subFileTree.pop();
-            }
             
-            let tempPath = [] // Emptying the array tempPath is not necessary because it is defined here and discarded after finishing this function. Otherwise, if declared globally it has to be emptied via the method from above
+            // Instead of "node[0]" which accesses the object which is returned from treeview, the V-Jstree object can be accessed with node.model
+            // Replace alle "node[0]" with "node.model"
             
-            // Here the full path of the clicked folder has to be passed to the sliceTree() function. The dataPath array represents the path of the parent folder. Hence the index of the clicked folder and the string "children" has to be pushed to dataPath befor passing it on
-            tempPath = node.model.dataPath.map((x) => x), // Alternative command for a shallow array copy: tempPath = Array.from(node.model.dataPath)
-
-            await this.getIndex(dataTree, tempPath, node.model.id)
-
-            tempPath.push(index)
-            tempPath.push('children')
-
-            await this.sliceDataTree(dataTree, tempPath)
-
-            this.getSubFiles(fileTree, node.model.systemPath, node.model.text) // Adding all the files (that are on root level of the clicked folder) to the rootFileTree array and combining all the files in subfolders in the subFileTree
           },
         }
       </script>
