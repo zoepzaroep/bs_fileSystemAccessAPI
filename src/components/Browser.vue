@@ -6,15 +6,14 @@
           TreePanel
         </div>
         <div class="header">
-          <v-btn v-on:click="openFile()">Open</v-btn>
-          <v-btn v-on:click="saveFile()">Save</v-btn>
-          <v-btn v-on:click="openFolder()">Open Folder</v-btn>
-          <v-btn v-on:click="getRootFiles()">Welcome Screen</v-btn>
-          <v-btn v-on:click="test()">Test Vuex</v-btn>
+          <v-btn v-on:click="openFile()">Open new file</v-btn>
+          <v-btn v-on:click="writeFile()">Save current file</v-btn>
+          <v-btn v-on:click="openFolder()">Open new Folder</v-btn>
         </div>
       </div>
       <div>
         <v-treeview
+          class="treeText"
           v-if="show"
           open-all
           dense
@@ -36,6 +35,8 @@
       <div>
         Files in the folder "{{folderName}}":
         <v-treeview
+          class="treeText"
+          ref="filetree"
           v-if="show"
           open-all
           dense
@@ -44,12 +45,15 @@
           selectable
           hoverable
           return-object
-          @update:active="readFile">
+          :active="rootFileTreeActivity"
+          @update:active="readRootFile">
         </v-treeview>
       </div>
       <div>
         Files in the subfolders of "{{folderName}}":
         <v-treeview
+          class="treeText"
+          ref="filetree"
           v-if="show"
           open-all
           dense
@@ -58,7 +62,8 @@
           selectable
           hoverable
           return-object
-          @update:active="readFile">
+          :active="subFileTreeActivity"
+          @update:active="readSubFile">
         </v-treeview>
       </div>
     </div>
@@ -83,6 +88,8 @@
 
   // Declaring a varibale here makes it available for all methods below
   let fileHandle;
+  let currentEntry;
+  let currentIndexEntry;
   let folder;
   let files = []; // The files array is requiered to save all the FileSystemAPI fileHandlers. These fileHandlers can then be searched through and recalled to open or save the specific file
   let dataTree = [];
@@ -90,12 +97,17 @@
   let rootFileTree = [];
   let subFileTree = [];
   let folderTree = [];
+  let rootFileTreeActivity = [];
+  let subFileTreeActivity = [];
   let folderName = "#";
   let content = "";
   let show = false;
+  let rootFileSelected = false;
+  let subFileSelected = false;
   let id = 1;
   let key;
   let index = 0; // The index of the array of the currently processed object
+  let indexName = "bs_index.txt";
 
   export default {
     name: 'Browser',
@@ -110,48 +122,95 @@
         rootFileTree,
         subFileTree,
         folderTree,
+        rootFileTreeActivity,
+        subFileTreeActivity,
         folderName,
         show,
+        rootFileSelected,
+        subFileSelected,
         folder,
         files,
-        content
+        content,
+        currentEntry,
+        currentIndexEntry
       }
     },
 
     methods: {
+
+      async readRootFile(node) {
+        // The treeview returns the whole object of the clicked entry. Under index [0] all the object´s attributes can be called
+        if (node.length === 0) { // When de-selecting the entry in the treeview it is returning an empty array, which would lead to an error
+          console.log("entry de-selected")
+          this.rootFileSelected = false
+          if (this.rootFileSelected === false && this.subFileSelected == false) { // Resetting the content of the FilePanel to the index of the selected sub folder
+            console.log("resetting index")
+            let file = await currentIndexEntry.getFile();
+            this.content = await file.text();
+          }
+        }
+        else {
+          this.subFileTreeActivity = []
+          this.readFile(node)
+          this.rootFileSelected = true
+        }
+      },
+
+      async readSubFile(node) {
+        // The treeview returns the whole object of the clicked entry. Under index [0] all the object´s attributes can be called
+        if (node.length === 0) { // When de-selecting the entry in the treeview it is returning an empty array, which would lead to an error
+          console.log("entry de-selected")
+          this.subFileSelected = false
+          if (this.rootFileSelected === false && this.subFileSelected == false) { // Resetting the content of the FilePanel to the index of the selected sub folder
+            console.log("resetting index")
+            let file = await currentIndexEntry.getFile();
+            this.content = await file.text();
+          }
+        }
+        else {
+          this.rootFileTreeActivity = []
+          this.readFile(node)
+          this.subFileSelected = true
+        }
+      },
+
+      async readIndexFile(node) {
+        files.forEach(async entry => { // This function only searches by name not by unique ID, which means files of the same name but different locations both are returned
+          if (entry.name == indexName) {
+            const path = await this.folder.resolve(entry);
+            if (path.slice(0, path.length - 1).join() === node.apiPath.slice(1).join()) { // Here the paths are compared to rule out files of the same name in subfolders
+              currentEntry = entry
+              currentIndexEntry = entry
+              let file = await entry.getFile();
+              this.content = await file.text();
+            }
+          }
+        });
+      },
+
       async openFile() { // Source: https://web.dev/file-system-access/
         [fileHandle] = await window.showOpenFilePicker();
-        console.log(fileHandle)
         const file = await fileHandle.getFile();
         this.content = await file.text();
       },
 
-      async saveFile() { // Source: https://web.dev/file-system-access/
-        let writable = await fileHandle.createWritable();
-        await writable.write(this.content);
-        await writable.close();
-      },
-
       async readFile(node) {
-        // The treeview returns the whole object of the clicked entry. Under index [0] all the object´s attributes can be called
-        if (node.length === 0) { // When de-selecting the entry in the treeview it is returning an empty array, which would lead to an error
-          console.log("entry de-selected")
-        }
-        else {
-          files.forEach(async entry => { // This function only searches by name not by unique ID, which means files of the same name but different locations both are returned
-            if (entry.name == node[0].name) {
-              const path = await this.folder.resolve(entry);
-              if (path.slice(0, path.length - 1).join() === node[0].apiPath.slice(1).join()) {
-                let file = await entry.getFile();
-                this.content = await file.text();
-              }
+        files.forEach(async entry => { // This function only searches by name not by unique ID, which means files of the same name but different locations both are returned
+          if (entry.name == node[0].name) {
+            const path = await this.folder.resolve(entry);
+            if (path.slice(0, path.length - 1).join() === node[0].apiPath.slice(1).join()) { // Here the paths are compared to rule out files of the same name in subfolders
+              currentEntry = entry
+              let file = await entry.getFile();
+              this.content = await file.text();
             }
-          });
-        }
+          }
+        });
       },
 
       async writeFile() {
-
+        let writable = await currentEntry.createWritable();
+        await writable.write(this.content);
+        await writable.close();
       },
 
       async openFolder() { // Source: https://www.youtube.com/watch?v=csCk4mrEmm8
@@ -210,7 +269,6 @@
             systemPath: systemPath.join('/'), // With the command join the systemPath array is transformed into a string and combined with the seperator '/'
             apiPath: systemPath.map((x) => x),
             obj: "file",
-            // entry: entry,
             children: []
           };
           let dirDataObj = {
@@ -228,7 +286,6 @@
             folderPath: folderPath.map((x) => x), // Array.from(folderPath)
             systemPath: systemPath.join('/'), // With the command join the systemPath array is transformed into a string and combined with the seperator '/'
             obj: "directory",
-            // entry: entry,
             children: []
           };
           let dirFolderObj = { // Even if this object would be out of the same structre as dirDataObj, there have to be two seperate objects for the function: "await this.assign(dataTree, dataPath, dirDataObj)" & "await this.assign(folderTree, folderPath, dirFolderObj)" otherwise it strangly adds multiple instances of teh object to the folderTree array. No idea why!
@@ -246,7 +303,6 @@
             folderPath: folderPath.map((x) => x), // Array.from(folderPath)
             systemPath: systemPath.join('/'), // With the command join the systemPath array is transformed into a string and combined with the seperator '/'
             obj: "directory",
-            // entry: entry,
             children: []
           };
 
@@ -355,11 +411,15 @@
 
         // The treeview returns the whole object of the clicked entry. Under index [0] all the object´s attributes can be called
         if (node.length === 0) { // When de-selecting the entry in the treeview it is returning an empty array, which would lead to an error
+          this.getRootFiles()
           console.log("node de-selected")
         }
         else {
           console.log(node[0].text + ' selected')
           this.folderName = node[0].text
+
+          // Clear the FilePanel
+          this.content = ""
 
           while (fileTree.length > 0) { // The fileTree array is completely reassigning within the function sliceTree(). Hence, it is not necessary to empty the array beforehand. It´s done here out of consistency
               fileTree.pop();
@@ -415,9 +475,15 @@
             subFileTree.pop();
         }
 
-        dataTree.forEach(function (entry) { // with the forEach command the root level of the array is iterated. Not nested arrays! That effect can also be acchieved with "this.fileTree.forEach(item => console.log(item.text));". However, with the arrow function it is a little less intuitive when doing a lot of stuff within the function (Source: https://stackoverflow.com/questions/3010840/loop-through-an-array-in-javascript)
+        dataTree.forEach(async entry => { // with the forEach command the root level of the array is iterated. Not nested arrays! That effect can also be acchieved with "this.fileTree.forEach(item => console.log(item.text));". However, with the arrow function it is a little less intuitive when doing a lot of stuff within the function (Source: https://stackoverflow.com/questions/3010840/loop-through-an-array-in-javascript)
           if (entry.obj === "file") {
-            rootFileTree.push(entry)
+            if (entry.name === indexName) {
+              console.log("index detected")
+              await this.readIndexFile(entry)
+            }
+            else {
+              rootFileTree.push(entry)
+            }
           }
         });
       },
@@ -425,11 +491,19 @@
       async getSubFiles(tree, path, parent) {
         for await (const entry of tree) { // The "dataTree.forEach(function (entry) {}"" from above (in "getRootFile()") had to be rewritten as a "for await" function to be able to use an "await" function within the function call
           if (entry.obj === "file") {
-            if (entry.systemPath === path + "/" + parent) {
-              rootFileTree.push(entry)
+            if (entry.name === indexName) {
+              if (entry.systemPath === path + "/" + parent) {
+                console.log("index detected")
+                await this.readIndexFile(entry)
+              }
             }
             else {
-              subFileTree.push(entry)
+              if (entry.systemPath === path + "/" + parent) {
+                rootFileTree.push(entry)
+              }
+              else {
+                subFileTree.push(entry)
+              }
             }
           }
           else if (entry.obj === "directory") {
@@ -469,6 +543,10 @@
 
 .tree {
   width: 25%; /* 25% of the whole window */
+}
+
+.treeText {
+  text-align: left;
 }
 
 .folder {
