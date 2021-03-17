@@ -1,0 +1,211 @@
+USAGE OF VUETIFY-TREEVIEW
+
+  Code changes:
+
+    // this.vue
+
+      <template>
+        <v-treeview
+          v-if="show" // v-if is necessary otherwise "open-all" does not work because the files cannot load during rendering
+          open-all
+          dense
+          :items="folderTree"
+          activatable
+          hoverable>
+        </v-treeview>
+      </template>
+
+      <script>
+        methods: {
+          async getFiles(folder, /* parentId = null, */ dataPath = [], folderPath = [], systemPath = ["#"]) {
+            (...)
+              // All the objects pushed into the tree array have to be equipted with a "name" see fileObj, dirDataObj & dirFolderObj
+              let fileObj = {
+                  id: id,
+                  name: entry.name, // instead of the title
+                  value: "",
+                  icon: "",
+                  opened: "true",
+                  // selected: "false",
+                  // disabled: "true",
+                  // loading: "false",
+                  // parent: parentId ?? '#',
+                  dataPath: dataPath.map((x) => x),
+                  systemPath: systemPath.join('/'),
+                  obj: "file",
+                  children: []
+                };
+            (...)
+          },
+
+          async itemClick (node) { // Source: https://github.com/zdy1988/vue-jstree
+            // This function has to be completely rewritten. Because the call "node.model.text" is specific for the v-jstree. Vuetify´s treeview plugin works a littel bit different
+          }
+        }
+      </script>
+
+PASSING DATA BETWEEN PARENT AND CHILD
+
+  Parent to child:
+    
+    // Parent.vue
+
+      <template>
+        <Child :variableProp="variable"/> // Pass the global variable down to the child
+      </template>
+
+      <script>
+        import Child from '@/components/Child.vue'
+
+        export default {
+          name: 'Parent',
+          components: {  
+            Child,
+          },
+
+          data () {
+            return {
+              variabel
+            }
+          }
+      </script>
+  
+    // Child.vue
+
+      <template>
+        // Access the prop in the template with the following attribute :data="this.$props.subFileTreeProp"
+      </template>
+
+      <script>
+        props: [
+          'variableProp'
+        ],
+      <script>
+
+
+  Child to parent:
+
+    // Child.vue
+
+      <template>
+        // Call an event e.g. v-on:click="$emit('emitted-call')" and emit the call
+      </template>
+
+    // Parent.vue
+    
+      <template>
+        <Child @emitted-call="function"/> // Listen for the emitted call
+      </template>
+
+USAGE OF V-JSTREE:
+
+  Code changes:
+
+    // this.vue
+
+      <template>
+        // Funny enough: adding the v-if to the jstree fixes another issue. When the tree is continously rendered while the dataTree array is generated, selecting a file/folder in the tree afterwards does not automatically select all children files/folder. When only loading the tree after fully creating the tree this does work however
+        // The v-jstree component must be assigned another class otherwise the component somehow bugs and presumably applies the above mentioned class a second time hence shrinks down even further. This can be circumvented by assigning a special class to the v-jstree component which uses the whole width of the div and disables overflow. Result, the tree places itself perfectly in the div without overflowing
+        <v-jstree
+          v-if="show"
+          class="jstree"
+          ref="tree"
+          :data="folderTree"
+          @item-click="itemClick">
+        </v-jstree>
+        // the "whole-row" (marking the whole row when selecting an entry) is disabled because it brings a bug where subfolders are not marked at all when selected. It does work for root level entries however
+      </template>
+
+      <script>
+
+        import VJstree from 'vue-jstree'
+
+        export default {
+          components: {
+            VJstree
+          }
+        }
+        methods: {
+          async getFiles(folder, /* parentId = null, */ dataPath = [], folderPath = [], systemPath = ["#"]) {
+            (...)
+              // All the objects pushed into the tree array have to be equipted with a "title" see fileObj, dirDataObj & dirFolderObj
+              let fileObj = {
+                  id: id,
+                  name: entry.name, // instead of the title
+                  value: "",
+                  icon: "",
+                  opened: "true",
+                  // selected: "false",
+                  // disabled: "true",
+                  // loading: "false",
+                  // parent: parentId ?? '#',
+                  dataPath: dataPath.map((x) => x),
+                  systemPath: systemPath.join('/'),
+                  obj: "file",
+                  children: []
+                };
+            (...)
+          },
+
+          async itemClick (node) { // Source: https://github.com/zdy1988/vue-jstree
+            
+            // Instead of "node[0]" which accesses the object which is returned from treeview, the V-Jstree object can be accessed with node.model
+            // Replace alle "node[0]" with "node.model"
+            
+          },
+        }
+      </script>
+
+ASYNC LOADING IN V-JSTREE:
+
+  Code changes:
+
+    //this.vue
+
+      <template>
+        <v-jstree
+          v-if="show"
+          class="column jstree"
+          ref="tree"
+          :data="asyncData"
+          :async="loadData"
+          show-checkbox
+          multiple
+          allow-batch
+          whole-row
+          @item-click="itemClick">
+        </v-jstree>     
+      </template>
+
+      <script>
+        data () {
+            return {
+              asyncData: [], // only a placeholder variabel requiered by the v-jstree component
+              loadData: function (oriNode, resolve) {
+                oriNode.data.id ? oriNode.data.id : 0 // No idea why this is needed - what the hell is oriNode
+                resolve(folderTree)
+            },
+          }
+        },
+        methods: {
+          refreshNode: function () {
+            this.asyncData = [
+                this.$refs.tree.initializeLoading()
+            ]
+            this.$refs.tree.handleAsyncLoad(this.asyncData, this.$refs.tree)
+          },
+        }
+      </script>
+
+
+  Issues with async loading:
+
+    Somehow when the tree is continously rendered while the dataTree array is generated, selecting a file/folder in the tree afterwards does not automatically select all children files/folder.
+    Without async this can be cirumvented by only rendering the tree after the array is finished via an v-if statement in the template
+
+
+  Improving loading times:
+
+    Loading times of the v-jstree can be drastically improved by only rendering the v-jstree after creating the array is finished.
+    Loading the v-jstree while the array is filled with the data from the File System API takes way longer
+    Furthermore loading times can be improved by not loading all the nested objects directly but first loading the root level, and then loading all nested objects while the root level is collapsed in the background - this however rewuieres async loading!

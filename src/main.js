@@ -3,8 +3,11 @@ import App from './Wrapper.vue'
 import router from './router'
 import vuetify from './plugins/vuetify';
 import store from "@/store";
+import vueCrypt from 'vue-crypt'
 
 Vue.config.productionTip = false
+
+Vue.use(vueCrypt)
 
 new Vue({
   router, // Introducing the router which is imported above from /router/index.js (index.js is the default filename and it is requiered to be named like that)
