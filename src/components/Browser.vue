@@ -9,7 +9,7 @@
           <v-btn v-on:click="openFile()">Open new file</v-btn>
           <v-btn v-on:click="writeFile()">Save current file</v-btn>
           <v-btn v-on:click="openFolder()">Open new Folder</v-btn>
-          <v-btn v-on:click="test()">Test</v-btn>
+          <!-- <v-btn v-on:click="test()">Test</v-btn> -->
         </div>
       </div>
       <div>
@@ -24,9 +24,9 @@
           hoverable
           return-object
           @update:active="itemClick">
-          <!-- Alternative way to trigger a function call on-click is by listening for clicks on the label. This however only triggers if the label (text) is clicked diretcly not when clicked on the whole row besides the text. Source: https://stackoverflow.com/questions/54719453/how-to-bind-an-event-to-a-treeview-node-in-vuetify/54719701 -->
-          <!-- "v-if" is necessary otherwise "open-all" does not work because the ":items" have no array asigned yet during page rendering -->
-          <!-- "return-object" makes the treeview return the whole object (not only the id) in events like @update. Here: the whole object is passed through to the function called by "@update:active" -->
+          <!-- "@update:active="itemClick"": Alternative way to trigger a function call on-click is by listening for clicks on the label. This however only triggers if the label (text) is clicked diretcly not when clicked on the whole row besides the text. Source: https://stackoverflow.com/questions/54719453/how-to-bind-an-event-to-a-treeview-node-in-vuetify/54719701 -->
+          <!-- "v-if": Is necessary otherwise "open-all" does not work because the ":items" have no array asigned yet during page rendering -->
+          <!-- "return-object": Makes the treeview return the whole object (not only the id) in events like @update. Here: the whole object is passed through to the function called by "@update:active" -->
         </v-treeview>
       </div>
     </div>
@@ -49,7 +49,7 @@
           return-object
           :active="rootFileTreeActivity"
           @update:active="readRootFile">
-          <!-- ":active" is an array assigned with which the active nodes of the tree (marked grey when selected) can be set and reset -->
+          <!-- ":active"; Is an array assigned with which the active nodes of the tree (marked grey when selected) can be set and reset -->
         </v-treeview>
       </div>
       <div>
@@ -92,7 +92,7 @@
   // Declaring a varibale here makes it available for all methods below but not for the template above (therefore the variable has to be returned below)
   let currentEntry; // Is set in the "readFile" function to cache which file (and its corresponding FileSystemAPI entry) is selected 
   let currentIndexEntry; // Is set in the "readIndexFile" function when searching for the index file while opening the folder initially. It is recalled in the "readRootFile" and "readSubFile" function to reset the FilePanel to show the index of the folder when no node of the tree is selected
-  let folder; // Is set in the "openFolder" function. It contains the whole return of the FileSystemAPI of the user-opened folder. This data is later iterated through in the "getFiles" function to push every entry (every file and directory) to an array. Furthermore, the whole "folder" is necessary in the "readIndexFile" and the "readFile" function to get the physical path (.resolve()) of a specified entry
+  let folder; // Is set in the "openFolder" function. It contains the whole response of the FileSystemAPI of the user-opened folder. This data is later iterated through in the "getFiles" function to push every entry (every file and directory) to an array. Furthermore, the whole "folder" is necessary in the "readIndexFile" and the "readFile" function to get the physical path (.resolve()) of a specified entry
   let files = []; // Is filled in the "getFiles" function with the FileSystemAPI fileHandler of every file of the opened root folder and subfolders. These fileHandlers can then be searched through and recalled to open or save the specific file on the file system
   let dataTree = []; // Is filled in the "getFiles" function with all the file and directory responses of the FileSystemAPI. This array does not contain the bare fileHandle entries but specific values for each file that are of interest in other functions. Furthermore, the dataTree contains all the entries in a v-treeview readable structure.
   let folderTree = []; // Is filled in the "getFiles" function with only the directory responses of the FileSystemAPI. The folderTree contains all the entries in a v-treeview readable structure and is used directly for the "folderTree" v-treeview.
@@ -101,8 +101,8 @@
   let subFileTree = []; // Is filled in the "getSubFiles" function. The "subFileTree" has only one dimension (not nested) and is a list of all the files of all the subfolders of a selected folder
   let rootFileTreeActivity = []; // Is used to reset the active nodes of the rootFileTree and is called from the "readSubFile" function
   let subFileTreeActivity = []; // Is used to reset the active nodes of the subFileTree and is called from the "readRootFile" function
-  let folderNameRoot = "#"; // Is used to reset the folderName to its initial state "#" within the "openFolder" and the "itemClick" function
-  let folderName = folderNameRoot; // Is assigned the name of the currently opened folder in the "itemClick" function. The folderName is used for the titles of the dividers in the FolderPanel. Initially "#" symbolises the root level.
+  let folderNameRoot = "/"; // Is used to reset the folderName to its initial state "/" within the "openFolder" and the "itemClick" function
+  let folderName = folderNameRoot; // Is assigned the name of the currently opened folder in the "itemClick" function. The folderName is used for the titles of the dividers in the FolderPanel. Initially "/" symbolises the root level.
   let content = "";
   let show = false;
   let rootFileSelected = false; // Is set in the "readRootFile" function to true to indicate that a node in the "rootFileTree" is selected
@@ -183,7 +183,7 @@
             // Bringing the resolved path of the FileSystemAPI and the stored path of the treeData array into the right format
             fileSystemApiPath = fileSystemApiPath.slice(0, fileSystemApiPath.length - 1) // fileSystemApiPath before: ["folder", "subfolder", "subsubfolder", "filename"] - fileSystemApiPath after: ["folder", "subfolder", "subsubfolder"]
             fileSystemApiPath = fileSystemApiPath.join() // fileSystemApiPath before: ["folder", "subfolder", "subsubfolder"] - fileSystemApiPath after: "folder,subfolder,subsubfolder" (comparing two strings is easier then comparing two arrays, thats why the arrays are transformed into strings here)
-            let treeDataApiPath = node.apiPath.slice(1) // treeDataApiPath before: ["#", "folder", "subfolder", "subsubfolder"] - treeDataApiPath after: ["folder", "subfolder", "subsubfolder"]
+            let treeDataApiPath = node.apiPath.slice(1) // node.apiPath before: ["/", "folder", "subfolder", "subsubfolder"] - treeDataApiPath after: ["folder", "subfolder", "subsubfolder"]
             treeDataApiPath = treeDataApiPath.join() // treeDataApiPath before: ["folder", "subfolder", "subsubfolder"] - treeDataApiPath after: "folder,subfolder,subsubfolder" (comparing two strings is easier then comparing two arrays, thats why the arrays are transformed into strings here)
             
             if (fileSystemApiPath === treeDataApiPath) { // Comparing the paths to rule out files of the same name but in subfolders
@@ -199,7 +199,13 @@
       async openFile() { // Template to open a single file from the system via the FileSystemAPI - Source: https://web.dev/file-system-access/
         let [fileHandle] = await window.showOpenFilePicker();
         const file = await fileHandle.getFile();
-        this.content = await file.text();
+        
+        // Test encryption/decryption
+        this.$aes.setKey("myPassword")
+        let encrypted = this.$aes.encrypt(await file.text())
+        console.log(encrypted)
+        let decrypted = this.$aes.decrypt(encrypted)
+        this.content = decrypted;
       },
 
       async readFile(node) { // This function is called by the "readRootFile" and "readSubFile" function. It searches the selected folder or subfolder for the (in the tree) selected file to show its content in the FilePanel
@@ -210,9 +216,9 @@
             // Bringing the resolved path of the FileSystemAPI and the stored path of the treeData array into the right format
             fileSystemApiPath = fileSystemApiPath.slice(0, fileSystemApiPath.length - 1) // fileSystemApiPath before: ["folder", "subfolder", "subsubfolder", "filename"] - fileSystemApiPath after: ["folder", "subfolder", "subsubfolder"]
             fileSystemApiPath = fileSystemApiPath.join() // fileSystemApiPath before: ["folder", "subfolder", "subsubfolder"] - fileSystemApiPath after: "folder,subfolder,subsubfolder" (comparing two strings is easier then comparing two arrays, thats why the arrays are transformed into strings here)
-            let treeDataApiPath = node[0].apiPath.slice(1) // treeDataApiPath before: ["#", "folder", "subfolder", "subsubfolder"] - treeDataApiPath after: ["folder", "subfolder", "subsubfolder"]
+            let treeDataApiPath = node[0].apiPath.slice(1) // node[0].apiPath before: ["/", "folder", "subfolder", "subsubfolder"] - treeDataApiPath after: ["folder", "subfolder", "subsubfolder"]
             treeDataApiPath = treeDataApiPath.join() // treeDataApiPath before: ["folder", "subfolder", "subsubfolder"] - treeDataApiPath after: "folder,subfolder,subsubfolder" (comparing two strings is easier then comparing two arrays, thats why the arrays are transformed into strings here)
-            
+
             if (fileSystemApiPath === treeDataApiPath) { // Comparing the paths to rule out files of the same name but in subfolders
               currentEntry = entry
               let file = await entry.getFile();
@@ -251,72 +257,42 @@
 
         this.folderName = folderNameRoot // Resetting the folderName to the initial state (the folderName is used for the titles of the dividers in the FolderPanel)
 
-        this.folder = await window.showDirectoryPicker(); // Files and folders come alphabetically from the FileSystemAPI (not sorted by files or folders)
-        await this.getFiles(this.folder); 
+        this.folder = await window.showDirectoryPicker() // Files and folders come alphabetically from the FileSystemAPI (not sorted by files or folders)
+        await this.getFiles(this.folder) // Passing the response of the FileSystemAPI down to the "getFiles" function where the whole folder is iterated through
 
-        await this.getRootFiles()
+        await this.getRootFiles() // Getting files of the root of the opened folder to show in the FolderPanel
 
-        this.show = true
-        console.log(dataTree)
+        this.show = true // Making the v-treeview modules in the template visible
 
+        console.log(dataTree) // Somehow when logging the dataTree in the console, it is kind of not shown correctly. The values of the nested objects cannot be seen in the console
       },
 
-      async getFiles(folder, /* parentId = null, */ dataPath = [], folderPath = [], systemPath = ["#"]) {
+      async getFiles(folder, /* parentId = null, */ dataPath = [], folderPath = [], apiPath = ["/"]) { // This function iterates through the response of the FileSystemAPI and saves the response into an array which has the right strucutre for the v-treeview component - Inspired by: https://www.youtube.com/watch?v=csCk4mrEmm8
 
         for await (const entry of folder.values()) {
           
-          // id has to be incrimented at the beginning (not the end) because this "for" function is nested and multiple times called within itself befor finishing
-          id++ // This starts with the id = 1 for the first object
+          id++ // This starts with the id = 1 for the first object. The id has to be incrimented at the beginning (not the end) of this loop because this "for" function is nested and multiple times recalled within itself befor finishing
 
-          // Declaring the Objects which are individually and recursivly pushed into the tree Structure arrays
-          let fileObj = { // Array/Object structure: https://zdy1988.github.io/vue-jstree/
-            id: id,
-            text: entry.name,
-            name: entry.name,
-            value: "",
-            icon: "",
-            opened: "true",
-            // selected: "false",
-            // disabled: "true",
-            // loading: "false",
-            // parent: parentId ?? '#',
-            dataPath: dataPath.map((x) => x), // Alternatively the following command can be used to make a shallow copy of an array "Array.from(dataPath)" - Source: https://www.freecodecamp.org/news/how-to-clone-an-array-in-javascript-1d3183468f6a/
-            systemPath: systemPath.join('/'), // With the command join the systemPath array is transformed into a string and combined with the seperator '/'
-            apiPath: systemPath.map((x) => x),
+          // Declaring the Objects which are individually and recursivly pushed into the tree structure arrays
+          let fileObj = { // Objects which are pushed to the tree arrays for every entry from the FileSystemAPI - Array/Object structure: https://vuetifyjs.com/en/components/treeview/#api
+            id: id, // Unique id
+            name: entry.name, // Name that is shown in the v-treeview as title of the node
+            // parent: parentId ?? '/',
+            dataPath: dataPath.map((x) => x), // The dataPath has the following structure: [indexNumber, "children", subIndexNumber, "children", etc.] e. g. [2, "children", 1, "children"] (the own filename is excluded of the path but saved under value "name" above) - The command "dataPath.map((x) => x)" makes a copy of an array (because arrays cannot be directly assigned to each other. Alternatively the following command can be used to make a shallow copy of an array "Array.from(dataPath)" - Source: https://www.freecodecamp.org/news/how-to-clone-an-array-in-javascript-1d3183468f6a/
+            folderPath: "n. A.", // The folderPath has the same structure as the dataPath and is constructed the same way. The difference is, that the folderPath does not contain any file entries but only directory entries (which is why the index´s of the array vary) - the fileObj does not contain a folderPath obviously - The folderPath array is only used within "getFiles" to create the "folderTree" which is shown in the template
+            apiPath: apiPath.map((x) => x), // The apiPath has the following structure: ["/", "folder", "subfolder", etc.] e. g. ["/", "root", "branch"] (the own filename is excluded of the path but saved under value "name" above) - The apiPath is used to detect a specific file or verify it with the corresponding file on the physical drive. This is done in the following functions: "readFile", "readIndexFile", "getSubFiles"
+            systemPath: apiPath.join('/'), // The systemPath has the following structure: "//folder/subfolder/etc." e. g. "//root/branch" (the own filename is excluded of the path but saved under value "name" above) - With the command join the apiPath array is transformed into a string and combined with the seperator '/' - This string is only used where human readability is necessary, other than that this 
             obj: "file",
             children: []
           };
           let dirDataObj = {
             id: id,
-            text: entry.name,
             name: entry.name,
-            value: "",
-            icon: "",
-            opened: "true",
-            // selected: "false",
-            // disabled: "false",
-            // loading: "false",
-            // parent: parentId ?? '#',
-            dataPath: dataPath.map((x) => x), // Alternatively the following command can be used to make a shallow copy of an array "Array.from(dataPath)" - Source: https://www.freecodecamp.org/news/how-to-clone-an-array-in-javascript-1d3183468f6a/
-            folderPath: folderPath.map((x) => x), // Array.from(folderPath)
-            systemPath: systemPath.join('/'), // With the command join the systemPath array is transformed into a string and combined with the seperator '/'
-            obj: "directory",
-            children: []
-          };
-          let dirFolderObj = { // Even if this object would be out of the same structre as dirDataObj, there have to be two seperate objects for the function: "await this.assign(dataTree, dataPath, dirDataObj)" & "await this.assign(folderTree, folderPath, dirFolderObj)" otherwise it strangly adds multiple instances of teh object to the folderTree array. No idea why!
-            id: id,
-            text: entry.name,
-            name: entry.name,
-            value: "",
-            icon: "",
-            opened: "true",
-            // selected: "false",
-            // disabled: "false",
-            // loading: "false",
-            // parent: parentId ?? '#',
-            dataPath: dataPath.map((x) => x), // Alternatively the following command can be used to make a shallow copy of an array "Array.from(dataPath)" - Source: https://www.freecodecamp.org/news/how-to-clone-an-array-in-javascript-1d3183468f6a/
-            folderPath: folderPath.map((x) => x), // Array.from(folderPath)
-            systemPath: systemPath.join('/'), // With the command join the systemPath array is transformed into a string and combined with the seperator '/'
+            // parent: parentId ?? '/',
+            dataPath: dataPath.map((x) => x), // see description under fileObj
+            folderPath: folderPath.map((x) => x), // see description under fileObj
+            apiPath: apiPath.map((x) => x), // see description under fileObj
+            systemPath: apiPath.join('/'), // see description under fileObj
             obj: "directory",
             children: []
           };
@@ -326,9 +302,9 @@
             this.files.push(entry)
           }
           else if (entry.kind === "directory") {
-            
+
             await this.assign(dataTree, dataPath, dirDataObj)
-            await this.assign(folderTree, folderPath, dirFolderObj)
+            await this.assign(folderTree, folderPath, JSON.parse(JSON.stringify(dirDataObj))) // When assigning the dirDataObj the second time to a different array, the object has to be copied. This copy has to be a deep copy (hence: Immutable). A shallow copy as with Object.assign({}, dirDataObj) does not work. it has to be parsed via JSON to make a deep copy
 
             // Get index of the above added directory in the dataTree array
             await this.getIndex(dataTree, dataPath, id)
@@ -341,17 +317,17 @@
             await this.moveArrayPathDown(folderPath)
 
             // Creating the human readable path of the above added directory
-            await this.moveSystemPathDown(systemPath, entry.name)
+            await this.moveSystemPathDown(apiPath, entry.name)
 
             // Going deeper in the folder structure by opening another directory by accessing this function again (nested). Therefore updating the array to pass the current tree path to the assign function later
-            await this.getFiles(entry, /* id,  */ dataPath, folderPath, systemPath)
+            await this.getFiles(entry, /* id,  */ dataPath, folderPath, apiPath)
           }
         }
         
         // When reaching this part of the function the deeper laying folder structures has been finished processing. Therefore updating the array to move up one folder in the path (if not already on the root level - which is considered within the moveArrayPathUp function)
         await this.moveArrayPathUp(dataPath)
         await this.moveArrayPathUp(folderPath)
-        await this.moveSystemPathUp(systemPath)
+        await this.moveSystemPathUp(apiPath)
       },
 
       async assign(obj, keyPath, value) { // Source: https://stackoverflow.com/questions/5484673/javascript-how-to-dynamically-create-nested-objects-using-object-names-given-by
@@ -430,8 +406,8 @@
           this.folderName = folderNameRoot // Resetting the folderName to the initial state (the folderName is used for the titles of the dividers in the FolderPanel)
         }
         else {
-          console.log(node[0].text + ' selected')
-          this.folderName = node[0].text
+          console.log(node[0].name + ' selected')
+          this.folderName = node[0].name
 
           // Clear the FilePanel
           this.content = ""
@@ -458,7 +434,7 @@
 
           await this.sliceDataTree(dataTree, tempPath)
 
-          this.getSubFiles(fileTree, node[0].systemPath, node[0].text) // Adding all the files (that are on root level of the clicked folder) to the rootFileTree array and combining all the files in subfolders in the subFileTree
+          this.getSubFiles(fileTree, node[0].apiPath, node[0].name) // Adding all the files (that are on root level of the clicked folder) to the rootFileTree array and combining all the files in subfolders in the subFileTree
         }
       },
 
@@ -490,7 +466,7 @@
             subFileTree.pop();
         }
 
-        dataTree.forEach(async entry => { // with the forEach command the root level of the array is iterated. Not nested arrays! That effect can also be acchieved with "this.fileTree.forEach(item => console.log(item.text));". However, with the arrow function it is a little less intuitive when doing a lot of stuff within the function (Source: https://stackoverflow.com/questions/3010840/loop-through-an-array-in-javascript)
+        dataTree.forEach(async entry => { // with the forEach command the root level of the array is iterated. Not nested arrays! That effect can also be acchieved with "this.fileTree.forEach(item => console.log(item.name));". However, with the arrow function it is a little less intuitive when doing a lot of stuff within the function (Source: https://stackoverflow.com/questions/3010840/loop-through-an-array-in-javascript)
           if (entry.obj === "file") {
             if (entry.name === indexName) {
               console.log("index detected")
@@ -507,13 +483,23 @@
         for await (const entry of tree) { // The "dataTree.forEach(function (entry) {}"" from above (in "getRootFile()") had to be rewritten as a "for await" function to be able to use an "await" function within the function call
           if (entry.obj === "file") {
             if (entry.name === indexName) {
-              if (entry.systemPath === path + "/" + parent) {
+
+              // Bringing the path of the node and the required path to identify as the index file into the right format
+              let indexFilePath = path + "," + parent // requiered path is: "pathOfSelectedFolder,nameOfFolderTheIndexFileIsIn"
+              let nodePath = entry.apiPath.join() // apiPath before: ["pathOfSelectedFolder", "nameOfFolderTheIndexFileIsIn"] - nodePath after: "pathOfSelectedFolder,nameOfFolderTheIndexFileIsIn" (comparing two strings is easier then comparing two arrays, thats why the arrays are transformed into strings here)
+              
+              if (nodePath === indexFilePath) {
                 console.log("index detected")
                 await this.readIndexFile(entry)
               }
             }
             else {
-              if (entry.systemPath === path + "/" + parent) {
+
+              // Bringing the path of the node and the required path to identify as a root file into the right format
+              let rootFilePath = path + "," + parent // requiered path is: "pathOfSelectedFolder,nameOfFolderThisFileIsIn"
+              let nodePath = entry.apiPath.join() // apiPath before: ["pathOfSelectedFolder", "nameOfFolderTheIndexFileIsIn"] - nodePath after: "pathOfSelectedFolder,nameOfFolderTheIndexFileIsIn" (comparing two strings is easier then comparing two arrays, thats why the arrays are transformed into strings here)
+
+              if (nodePath === rootFilePath) {
                 rootFileTree.push(entry)
               }
               else {

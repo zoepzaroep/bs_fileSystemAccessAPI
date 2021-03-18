@@ -129,7 +129,7 @@ USAGE OF V-JSTREE:
           async getFiles(folder, /* parentId = null, */ dataPath = [], folderPath = [], systemPath = ["#"]) {
             (...)
               // All the objects pushed into the tree array have to be equipted with a "title" see fileObj, dirDataObj & dirFolderObj
-              let fileObj = {
+              let fileObj = { // Array/Object structure: https://zdy1988.github.io/vue-jstree/
                   id: id,
                   name: entry.name, // instead of the title
                   value: "",
