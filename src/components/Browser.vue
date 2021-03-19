@@ -9,7 +9,7 @@
           <v-btn v-on:click="openFile()">Open new file</v-btn>
           <v-btn v-on:click="writeFile()">Save current file</v-btn>
           <v-btn v-on:click="openFolder()">Open new Folder</v-btn>
-          <!-- <v-btn v-on:click="test()">Test</v-btn> -->
+          <v-btn v-on:click="test()">Test</v-btn>
         </div>
       </div>
       <div>
@@ -23,7 +23,8 @@
           activatable
           hoverable
           return-object
-          @update:active="itemClick">
+          @update:active="itemClick"
+        >
           <!-- "@update:active="itemClick"": Alternative way to trigger a function call on-click is by listening for clicks on the label. This however only triggers if the label (text) is clicked diretcly not when clicked on the whole row besides the text. Source: https://stackoverflow.com/questions/54719453/how-to-bind-an-event-to-a-treeview-node-in-vuetify/54719701 -->
           <!-- "v-if": Is necessary otherwise "open-all" does not work because the ":items" have no array asigned yet during page rendering -->
           <!-- "return-object": Makes the treeview return the whole object (not only the id) in events like @update. Here: the whole object is passed through to the function called by "@update:active" -->
@@ -48,7 +49,8 @@
           hoverable
           return-object
           :active="rootFileTreeActivity"
-          @update:active="readRootFile">
+          @update:active="readRootFile"
+        >
           <!-- ":active"; Is an array assigned with which the active nodes of the tree (marked grey when selected) can be set and reset -->
         </v-treeview>
       </div>
@@ -66,7 +68,8 @@
           hoverable
           return-object
           :active="subFileTreeActivity"
-          @update:active="readSubFile">
+          @update:active="readSubFile"
+        >
         </v-treeview>
       </div>
     </div>
@@ -88,6 +91,8 @@
 <script>
 
   import store from "@/store";
+  import { get, set } from 'idb-keyval';
+  
 
   // Declaring a varibale here makes it available for all methods below but not for the template above (therefore the variable has to be returned below)
   let currentEntry; // Is set in the "readFile" function to cache which file (and its corresponding FileSystemAPI entry) is selected 
@@ -107,8 +112,8 @@
   let show = false;
   let rootFileSelected = false; // Is set in the "readRootFile" function to true to indicate that a node in the "rootFileTree" is selected
   let subFileSelected = false; // Is set in the "readSubFile" function to true to indicate that a node in the "subFileTree" is selected
-  let id = 1;
   let key;
+  let id = 0;
   let index = 0; // The index of the array of the currently processed object
   let indexName = "bs_index.txt";
 
@@ -175,27 +180,6 @@
         }
       },
 
-      async readIndexFile(node) { // This function is called by the "getRootFiles" and "getSubFiles" function. It searches the selected folder for the index file to show in the FilePanel when opening the folder initially
-        files.forEach(async entry => { // Iterating through all the files of the opened root folder and subfolders
-          if (entry.name == indexName) { // This function only searches for the name of the index file not for a unique ID, which means files of the same name but different locations all are returned
-            let fileSystemApiPath = await this.folder.resolve(entry); // resolving the path of the current fileHandler with the "resolve" function of the FileSystemAPI
-            
-            // Bringing the resolved path of the FileSystemAPI and the stored path of the treeData array into the right format
-            fileSystemApiPath = fileSystemApiPath.slice(0, fileSystemApiPath.length - 1) // fileSystemApiPath before: ["folder", "subfolder", "subsubfolder", "filename"] - fileSystemApiPath after: ["folder", "subfolder", "subsubfolder"]
-            fileSystemApiPath = fileSystemApiPath.join() // fileSystemApiPath before: ["folder", "subfolder", "subsubfolder"] - fileSystemApiPath after: "folder,subfolder,subsubfolder" (comparing two strings is easier then comparing two arrays, thats why the arrays are transformed into strings here)
-            let treeDataApiPath = node.apiPath.slice(1) // node.apiPath before: ["/", "folder", "subfolder", "subsubfolder"] - treeDataApiPath after: ["folder", "subfolder", "subsubfolder"]
-            treeDataApiPath = treeDataApiPath.join() // treeDataApiPath before: ["folder", "subfolder", "subsubfolder"] - treeDataApiPath after: "folder,subfolder,subsubfolder" (comparing two strings is easier then comparing two arrays, thats why the arrays are transformed into strings here)
-            
-            if (fileSystemApiPath === treeDataApiPath) { // Comparing the paths to rule out files of the same name but in subfolders
-              currentEntry = entry
-              currentIndexEntry = entry
-              let file = await entry.getFile();
-              this.content = await file.text();
-            }
-          }
-        });
-      },
-
       async openFile() { // Template to open a single file from the system via the FileSystemAPI - Source: https://web.dev/file-system-access/
         let [fileHandle] = await window.showOpenFilePicker();
         const file = await fileHandle.getFile();
@@ -208,24 +192,12 @@
         this.content = decrypted;
       },
 
-      async readFile(node) { // This function is called by the "readRootFile" and "readSubFile" function. It searches the selected folder or subfolder for the (in the tree) selected file to show its content in the FilePanel
-        files.forEach(async entry => { // Iterating through all the files of the opened root folder and subfolders
-          if (entry.name == node[0].name) { // This function only searches for the name of the currently selected node of the tree (the values of the node are contained under index "0" of the node), which means files of the same name but different locations all are returned
-            let fileSystemApiPath = await this.folder.resolve(entry); // resolving the path of the current fileHandler with the "resolve" function of the FileSystemAPI
-            
-            // Bringing the resolved path of the FileSystemAPI and the stored path of the treeData array into the right format
-            fileSystemApiPath = fileSystemApiPath.slice(0, fileSystemApiPath.length - 1) // fileSystemApiPath before: ["folder", "subfolder", "subsubfolder", "filename"] - fileSystemApiPath after: ["folder", "subfolder", "subsubfolder"]
-            fileSystemApiPath = fileSystemApiPath.join() // fileSystemApiPath before: ["folder", "subfolder", "subsubfolder"] - fileSystemApiPath after: "folder,subfolder,subsubfolder" (comparing two strings is easier then comparing two arrays, thats why the arrays are transformed into strings here)
-            let treeDataApiPath = node[0].apiPath.slice(1) // node[0].apiPath before: ["/", "folder", "subfolder", "subsubfolder"] - treeDataApiPath after: ["folder", "subfolder", "subsubfolder"]
-            treeDataApiPath = treeDataApiPath.join() // treeDataApiPath before: ["folder", "subfolder", "subsubfolder"] - treeDataApiPath after: "folder,subfolder,subsubfolder" (comparing two strings is easier then comparing two arrays, thats why the arrays are transformed into strings here)
-
-            if (fileSystemApiPath === treeDataApiPath) { // Comparing the paths to rule out files of the same name but in subfolders
-              currentEntry = entry
-              let file = await entry.getFile();
-              this.content = await file.text();
-            }
-          }
-        });
+      async readFile(node) { // This function is called by the "readRootFile" and "readSubFile" function. It searches the selected folder or subfolder for the (in the tree) selected file to show its content in the FilePanel         
+        get(node[0].id).then(async fileHandle => {
+          currentEntry = fileHandle
+          let file = await fileHandle.getFile();
+          this.content = await file.text();
+        })
       },
 
       async writeFile() { // This function saves the currently selected file which is shown in the FilePanel to the system via the FileSystemAPI - Source: https://web.dev/file-system-access/
@@ -280,8 +252,8 @@
             // parent: parentId ?? '/',
             dataPath: dataPath.map((x) => x), // The dataPath has the following structure: [indexNumber, "children", subIndexNumber, "children", etc.] e. g. [2, "children", 1, "children"] (the own filename is excluded of the path but saved under value "name" above) - The command "dataPath.map((x) => x)" makes a copy of an array (because arrays cannot be directly assigned to each other. Alternatively the following command can be used to make a shallow copy of an array "Array.from(dataPath)" - Source: https://www.freecodecamp.org/news/how-to-clone-an-array-in-javascript-1d3183468f6a/
             folderPath: "n. A.", // The folderPath has the same structure as the dataPath and is constructed the same way. The difference is, that the folderPath does not contain any file entries but only directory entries (which is why the index´s of the array vary) - the fileObj does not contain a folderPath obviously - The folderPath array is only used within "getFiles" to create the "folderTree" which is shown in the template
-            apiPath: apiPath.map((x) => x), // The apiPath has the following structure: ["/", "folder", "subfolder", etc.] e. g. ["/", "root", "branch"] (the own filename is excluded of the path but saved under value "name" above) - The apiPath is used to detect a specific file or verify it with the corresponding file on the physical drive. This is done in the following functions: "readFile", "readIndexFile", "getSubFiles"
-            systemPath: apiPath.join('/'), // The systemPath has the following structure: "//folder/subfolder/etc." e. g. "//root/branch" (the own filename is excluded of the path but saved under value "name" above) - With the command join the apiPath array is transformed into a string and combined with the seperator '/' - This string is only used where human readability is necessary, other than that this 
+            apiPath: apiPath.map((x) => x), // The apiPath has the following structure: ["/", "folder", "subfolder", etc.] e. g. ["/", "root", "branch"] (the own filename is excluded of the path but saved under value "name" above) - The apiPath is used to detect a specific file or verify it with the corresponding file on the physical drive. This is done in the following functions: "readIndexFile", "getSubFiles"
+            systemPath: apiPath.join('/'), // The systemPath has the following structure: "//folder/subfolder/etc." e. g. "//root/branch" (the own filename is excluded of the path but saved under value "name" above) - With the command join the apiPath array is transformed into a string and combined with the seperator '/' - This string is only used where human readability is necessary
             obj: "file",
             children: []
           };
@@ -298,8 +270,12 @@
           };
 
           if (entry.kind === "file") {
+            
             await this.assign(dataTree, dataPath, fileObj)
             this.files.push(entry)
+
+            // Save all entries in the database not by id but by unique "path + filename" - Fuzzy search of the IndexedDB is necessary
+            set(id, entry);
           }
           else if (entry.kind === "directory") {
 
@@ -321,10 +297,11 @@
 
             // Going deeper in the folder structure by opening another directory by accessing this function again (nested). Therefore updating the array to pass the current tree path to the assign function later
             await this.getFiles(entry, /* id,  */ dataPath, folderPath, apiPath)
+
           }
         }
         
-        // When reaching this part of the function the deeper laying folder structures has been finished processing. Therefore updating the array to move up one folder in the path (if not already on the root level - which is considered within the moveArrayPathUp function)
+        // When reaching this part of the function the deeper laying folder structures have been finished processing. Therefore updating the array to move up one folder in the path (if not already on the root level - which is considered within the moveArrayPathUp function)
         await this.moveArrayPathUp(dataPath)
         await this.moveArrayPathUp(folderPath)
         await this.moveSystemPathUp(apiPath)
@@ -513,6 +490,27 @@
         }
       },
 
+      async readIndexFile(node) { // This function is called by the "getRootFiles" and "getSubFiles" function. It searches the selected folder for the index file to show in the FilePanel when opening the folder initially
+        files.forEach(async entry => { // Iterating through all the files of the opened root folder and subfolders
+          if (entry.name == indexName) { // This function only searches for the name of the index file not for a unique ID, which means files of the same name but different locations all are returned
+            let fileSystemApiPath = await this.folder.resolve(entry); // resolving the path of the current fileHandler with the "resolve" function of the FileSystemAPI
+            
+            // Bringing the resolved path of the FileSystemAPI and the stored path of the treeData array into the right format
+            fileSystemApiPath = fileSystemApiPath.slice(0, fileSystemApiPath.length - 1) // fileSystemApiPath before: ["folder", "subfolder", "subsubfolder", "filename"] - fileSystemApiPath after: ["folder", "subfolder", "subsubfolder"]
+            fileSystemApiPath = fileSystemApiPath.join() // fileSystemApiPath before: ["folder", "subfolder", "subsubfolder"] - fileSystemApiPath after: "folder,subfolder,subsubfolder" (comparing two strings is easier then comparing two arrays, thats why the arrays are transformed into strings here)
+            let treeDataApiPath = node.apiPath.slice(1) // node.apiPath before: ["/", "folder", "subfolder", "subsubfolder"] - treeDataApiPath after: ["folder", "subfolder", "subsubfolder"]
+            treeDataApiPath = treeDataApiPath.join() // treeDataApiPath before: ["folder", "subfolder", "subsubfolder"] - treeDataApiPath after: "folder,subfolder,subsubfolder" (comparing two strings is easier then comparing two arrays, thats why the arrays are transformed into strings here)
+            
+            if (fileSystemApiPath === treeDataApiPath) { // Comparing the paths to rule out files of the same name but in subfolders
+              currentEntry = entry
+              currentIndexEntry = entry
+              let file = await entry.getFile();
+              this.content = await file.text();
+            }
+          }
+        });
+      },
+
       async test() { // Test-function to test various functions
          // test if the Vuex setup works
         this.$store.commit('increment')
@@ -526,6 +524,8 @@
         console.log(encrypted)
         let decrypted = this.$aes.decrypt(encrypted)
         console.log(decrypted)
+
+        get(5).then((val) => console.log(val));
       },
     },
 

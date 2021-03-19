@@ -1,3 +1,73 @@
+TODO: IMPLEMENTATION OF LAZY LOADING
+
+    <v-treeview
+        :active.sync="active"
+        :items="items"
+        :load-children="fetchUsers"
+        :open.sync="open"
+        activatable
+        color="warning"
+        open-on-click
+        transition
+    >
+        <template v-slot:prepend="{ item }">
+        <v-icon v-if="!item.children">
+            mdi-account
+        </v-icon>
+        </template>
+    </v-treeview>
+
+TODO: STORING API RESPONSES IN INDEXEDDB
+
+    File handles and directory handles are serializable, which means that you can save a file or directory handle to IndexedDB, or call postMessage() to send them between the same top-level origin.
+
+    Saving file or directory handles to IndexedDB means that you can store state, or remember which files or directories a user was working on. This makes it possible to keep a list of recently opened or edited files, offer to re-open the last file when the app is opened, restore the previous working directory, and more. In the text editor, I store a list of the five most recent files the user has opened, making it easy to access those files again.
+
+    The code example below shows storing and retrieving a file handle and a directory handle. You can see this in action over on Glitch (I use the idb-keyval library for brevity).
+
+        import { get, set } from "https://unpkg.com/idb-keyval@5.0.2/dist/esm/index.js";
+
+        const pre1 = document.querySelector("pre.file");
+        const pre2 = document.querySelector("pre.directory");
+        const button1 = document.querySelector("button.file");
+        const button2 = document.querySelector("button.directory");
+
+        // File handle
+        button1.addEventListener("click", async () => {
+        try {
+            const fileHandleOrUndefined = await get("file");
+            if (fileHandleOrUndefined) {
+            pre1.textContent = `Retrieved file handle "${fileHandleOrUndefined.name}" from IndexedDB.`;
+            return;
+            }
+            const [fileHandle] = await window.showOpenFilePicker();
+            await set("file", fileHandle);
+            pre1.textContent = `Stored file handle for "${fileHandle.name}" in IndexedDB.`;
+        } catch (error) {
+            alert(error.name, error.message);
+        }
+        });
+
+        // Directory handle
+        button2.addEventListener("click", async () => {
+        try {
+            const directoryHandleOrUndefined = await get("directory");
+            if (directoryHandleOrUndefined) {
+            pre2.textContent = `Retrieved directroy handle "${directoryHandleOrUndefined.name}" from IndexedDB.`;
+            return;
+            }
+            const directoryHandle = await window.showDirectoryPicker();
+            await set("directory", directoryHandle);
+            pre2.textContent = `Stored directory handle for "${directoryHandle.name}" in IndexedDB.`;
+        } catch (error) {
+            alert(error.name, error.message);
+        }
+        });
+
+
+
+
+
 USAGE OF VUETIFY-TREEVIEW
 
   Code changes:
