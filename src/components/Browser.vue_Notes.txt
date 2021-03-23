@@ -1,23 +1,4 @@
-TODO: IMPLEMENTATION OF LAZY LOADING
-
-    <v-treeview
-        :active.sync="active"
-        :items="items"
-        :load-children="fetchUsers"
-        :open.sync="open"
-        activatable
-        color="warning"
-        open-on-click
-        transition
-    >
-        <template v-slot:prepend="{ item }">
-        <v-icon v-if="!item.children">
-            mdi-account
-        </v-icon>
-        </template>
-    </v-treeview>
-
-TODO: STORING API RESPONSES IN INDEXEDDB
+STORING API RESPONSES IN INDEXEDDB
 
     File handles and directory handles are serializable, which means that you can save a file or directory handle to IndexedDB, or call postMessage() to send them between the same top-level origin.
 
@@ -63,10 +44,6 @@ TODO: STORING API RESPONSES IN INDEXEDDB
             alert(error.name, error.message);
         }
         });
-
-
-
-
 
 USAGE OF VUETIFY-TREEVIEW
 
