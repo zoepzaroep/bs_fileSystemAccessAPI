@@ -1,3 +1,10 @@
+TODO:
+  - Make some CSS to indicate that the data-table object was selected
+  - in the js function which is called from the data-table set a variabel which indicates that an entry is selected
+    - rewrite the other functions accordingly
+  - Switch the working "@update:active="folderSelect"" function of the folderTree to function used in the data-table (out of consitency reasons)
+
+
 STORING API RESPONSES IN INDEXEDDB
 
     File handles and directory handles are serializable, which means that you can save a file or directory handle to IndexedDB, or call postMessage() to send them between the same top-level origin.
