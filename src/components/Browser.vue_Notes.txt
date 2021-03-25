@@ -1,8 +1,6 @@
 TODO:
   - Make some CSS to indicate that the data-table object was selected
-  - in the js function which is called from the data-table set a variabel which indicates that an entry is selected
-    - rewrite the other functions accordingly
-  - Switch the working "@update:active="folderSelect"" function of the folderTree to function used in the data-table (out of consitency reasons)
+  - As soon as id++ is removed from getRootFolders() the folderTree selection breaks. Why is that? If possible: Fix it and remove variabel id completely
 
 
 STORING API RESPONSES IN INDEXEDDB

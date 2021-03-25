@@ -1,93 +1,99 @@
 <template>
-  <div>
-    <div class="column tree">
-      <div>
-        <div class="header">
-          TreePanel
+  <v-app>
+    <div>
+      <div class="column tree">
+        <div>
+          <div class="header">
+            TreePanel
+          </div>
+          <div class="header">
+            <v-btn v-on:click="openFile()">Open new file</v-btn>
+            <v-btn v-on:click="writeFile()">Save current file</v-btn>
+            <v-btn v-on:click="openRootFolder()">Open new Folder</v-btn>
+            <!-- <v-btn v-on:click="test()">Test</v-btn> -->
+          </div>
         </div>
-        <div class="header">
-          <v-btn v-on:click="openFile()">Open new file</v-btn>
-          <v-btn v-on:click="writeFile()">Save current file</v-btn>
-          <v-btn v-on:click="openRootFolder()">Open new Folder</v-btn>
-          <v-btn v-on:click="test()">Test</v-btn>
+        <div>
+          <v-treeview
+            class="treeText"
+            ref="folderTree"
+            v-if="show"
+            dense
+            :items="folderTree"
+            activatable
+            hoverable
+            return-object
+            :load-children="getSubFolders"
+            @update:active="folderSelect"
+          >
+            <template slot="label" slot-scope="{ item }">
+              <a>{{ item.name }}</a>
+            </template>
+            <!-- "@update:active="itemClick"": Alternative way to trigger is via the template and "@click". This however only triggers if the label (text) is clicked diretcly not when clicked on the whole row besides the text. Source: https://stackoverflow.com/questions/54719453/how-to-bind-an-event-to-a-treeview-node-in-vuetify/54719701 -->
+            <!-- "return-object": Makes the treeview return the whole object (not only the id) in events like @update. Here: the whole object is passed through to the function called by "@update:active". There the values of the object can be accessed under index "0". Hence the values are called from "node[0]" -->
+          </v-treeview>
         </div>
       </div>
-      <div>
-        <v-treeview
-          class="treeText"
-          ref="folderTree"
-          v-if="show"
-          dense
-          :items="folderTree"
-          activatable
-          hoverable
-          return-object
-          :load-children="getSubFolders"
-          @update:active="folderSelect"
-        >
-          <!-- "@update:active="itemClick"": Alternative way to trigger a function call on-click is by listening for clicks on the label. This however only triggers if the label (text) is clicked diretcly not when clicked on the whole row besides the text. Source: https://stackoverflow.com/questions/54719453/how-to-bind-an-event-to-a-treeview-node-in-vuetify/54719701 -->
-          <!-- "v-if": Is necessary otherwise "open-all" does not work because the ":items" have no array asigned yet during page rendering -->
-          <!-- "return-object": Makes the treeview return the whole object (not only the id) in events like @update. Here: the whole object is passed through to the function called by "@update:active" -->
-        </v-treeview>
+      <div class="column folder">
+        <div class="header">
+          FolderPanel
+        </div>
+        <div>
+          Files in the folder "{{folderName}}":
+          <v-data-table
+            class="treeText"
+            ref="rootFileTree"
+            v-if="show"
+            :headers="headers"
+            :items="rootFileTree"
+          >
+            <template v-slot:item="{ item }">
+              <tr @click="fileSelect(item)">
+                <td>{{item.name}}</td>
+                <td>{{item.id}}</td>
+                <td>{{item.systemPath.join('/')}}</td>
+                <td>{{item.obj}}</td>
+              </tr>
+            </template>
+            <!-- Source: https://stackoverflow.com/questions/59313008/select-rows-in-vuetify-data-table -->
+          </v-data-table>
+        </div>
+        <div>
+          Files in the subfolders of "{{folderName}}":
+          <v-btn v-on:click="showSubFiles(dirHandle)">Show Subfiles</v-btn>
+          <v-data-table
+            class="treeText"
+            ref="subFileTree"
+            v-if="show"
+            :headers="headers"
+            :items="subFileTree"
+          >
+            <template v-slot:item="{ item }">
+              <tr @click="fileSelect(item)">
+                <td>{{item.name}}</td>
+                <td>{{item.id}}</td>
+                <td>{{item.systemPath.join('/')}}</td>
+                <td>{{item.obj}}</td>
+              </tr>
+            </template>
+            <!-- Source: https://stackoverflow.com/questions/59313008/select-rows-in-vuetify-data-table -->
+          </v-data-table>
+        </div>
+      </div>
+      <div class="column file">
+        <div class="header">
+          FilePanel
+        </div>
+        <div>
+          <v-textarea
+            v-model="content"
+            label="Textarea default style"
+            hint="This is a hint text">
+          </v-textarea>
+        </div>
       </div>
     </div>
-    <div class="column folder">
-      <div class="header">
-        FolderPanel
-      </div>
-      <div>
-        Files in the folder "{{folderName}}":
-        <v-data-table
-          class="treeText"
-          ref="rootFileTree"
-          v-if="show"
-          :headers="headers"
-          :items="rootFileTree"
-        >
-          <template v-slot:item="{ item }">
-            <tr @click="rootFileSelect(item)">
-              <td>{{item.name}}</td>
-              <td>{{item.id}}</td>
-              <td>{{item.systemPath}}</td>
-              <td>{{item.obj}}</td>
-            </tr>
-          </template>
-          <!-- Source: https://stackoverflow.com/questions/59313008/select-rows-in-vuetify-data-table -->
-        </v-data-table>
-      </div>
-      <div>
-        Files in the subfolders of "{{folderName}}":
-        <v-treeview
-          class="treeText"
-          ref="subFileTree"
-          v-if="show"
-          open-all
-          dense
-          :items="subFileTree"
-          activatable
-          selectable
-          hoverable
-          return-object
-          :active="subFileTreeActivity"
-          @update:active="subFileSelect"
-        >
-          <!-- ":active"; Is an array assigned with which the active nodes of the tree (marked grey when selected) can be set and reset -->
-        </v-treeview>
-      </div>
-    </div>
-    <div class="column file">
-      <div class="header">
-        FilePanel
-      </div>
-      <div>
-        <v-textarea
-          v-model="content"
-          label="Textarea default style"
-          hint="This is a hint text">
-        </v-textarea>
-      </div>
-    </div>
-  </div>
+  </v-app>
 </template>
 
 <script>
@@ -104,17 +110,15 @@
   let folderTree = []; // Is filled in the "getRootFolders" function with only the directory responses of the FileSystemAPI. The folderTree contains all the entries in a v-treeview readable structure and is used directly for the "folderTree" v-treeview.
   let rootFileTree = []; // Is filled in the "getRootFiles" and "getSubFiles" function. The "rootFileTree" has only one dimension (not nested) and is a list of all the files of a selected folder
   let subFileTree = []; // Is filled in the "getSubFiles" function. The "subFileTree" has only one dimension (not nested) and is a list of all the files of all the subfolders of a selected folder
-  let rootFileTreeActivity = []; // Is used to reset the active nodes of the rootFileTree and is called from the "readSubFile" function
-  let subFileTreeActivity = []; // Is used to reset the active nodes of the subFileTree and is called from the "readRootFile" function
   let folderNameRoot = "/"; // Is used to reset the folderName to its initial state "/" within the "openRootFolder" and the "itemClick" function
   let folderName = folderNameRoot; // Is assigned the name of the currently opened folder in the "itemClick" function. The folderName is used for the titles of the dividers in the FolderPanel. Initially "/" symbolises the root level.
   let content = "";
   let show = false;
-  let rootFileSelected = false; // Is set in the "readRootFile" function to true to indicate that a node in the "rootFileTree" is selected
-  let subFileSelected = false; // Is set in the "readSubFile" function to true to indicate that a node in the "subFileTree" is selected
-  let id = 0;
+  let fileSelected; // Is set in the "readRootFile" function to true to indicate that a node in the "rootFileTree" is selected
+  let id = 0; // Since the id is first iterated at the beginning of the rof loop, the first entry gets the id "1" (not "0")
   let indexName = "bs_index.txt";
   let nestedLevel = 0; // getSubFiles() detect if on root level of the folder or sub level (to not add root level files to the subFilesTree)
+  let cancelJob = false;
 
   export default {
     name: 'Browser',
@@ -131,13 +135,10 @@
         folderTree,
         rootFileTree,
         subFileTree,
-        rootFileTreeActivity,
-        subFileTreeActivity,
         folderName,
         content,
         show,
-        rootFileSelected,
-        subFileSelected,
+        fileSelected,
         headers: [
           {
             text: 'Filename',
@@ -149,21 +150,11 @@
           { text: 'Path', value: 'systemPath' },
           { text: 'Type', value: 'obj' },
         ],
+        selectedRows: [],
       }
     },
 
     methods: {
-
-      async fetchUsers (item) {
-
-        console.log(item.systemPath)
-        return fetch('https://jsonplaceholder.typicode.com/users')
-          .then(res => res.json())
-          .then(json => (item.children.push(...json)))
-          .catch(err => console.warn(err))
-      },
-
-
 
       async openFile() { // Template to open a single file from the system via the FileSystemAPI - Source: https://web.dev/file-system-access/
         let [fileHandle] = await window.showOpenFilePicker();
@@ -205,74 +196,59 @@
         console.log(this.folderTree) // Somehow when logging the dataTree in the console, it is kind of not shown correctly. The values of the nested objects cannot be seen in the console
       },
 
-      async folderSelect(node) { // Source: https://github.com/zdy1988/vue-jstree
+      async showSubFiles(dirHandle) {   
+        while (subFileTree.length > 0) { // The subFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
+          subFileTree.pop();
+        }
+        this.getSubFiles(dirHandle)
+      },
+
+      async folderSelect(node) {
+        // Cancel running jobs
+        cancelJob = true
+        setTimeout(() => {  cancelJob = false }, 100);
 
         while (rootFileTree.length > 0) { // The rootFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
-            rootFileTree.pop();
+          rootFileTree.pop();
         }
         while (subFileTree.length > 0) { // The subFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
-            subFileTree.pop();
+          subFileTree.pop();
         }
 
         // The treeview returns the whole object of the clicked entry. Under index [0] all the object´s attributes can be called
-        if (node.length === 0) { // When de-selecting the entry in the treeview it is returning an empty array, which would lead to an error
+        if (node.length === 0) { // When de-selecting the entry in the treeview it is returning an empty array, which would lead to an error. In comparision to the other method in "fileSelect()" where the node is returned whether it is selected or not, here the node is only returned when selected not deselected due to the "@update:active" method in the template
+          console.log("node de-selected")
           this.dirHandle = this.rootFolder // Necessary to save it in the dirHandler coz getSubFiles() may use the dirHandle at a later point in time
           this.getRootFiles(this.dirHandle)
-          console.log("node de-selected")
           this.folderName = folderNameRoot // Resetting the folderName to the initial state (the folderName is used for the titles of the dividers in the FolderPanel)
+        
+          this.folderSelected = ""
+        
         }
         else {
           console.log(node[0].name + ' selected')
           this.folderName = node[0].name
-
           // Clear the FilePanel
           this.content = ""
           
-          get(node[0].systemPath.join('/') + '/' + node[0].name).then(async dirHandle => {
+          get(node[0].systemPath.join('/')).then(async dirHandle => {
             this.dirHandle = dirHandle
             this.getRootFiles(dirHandle) // Adding all the files (that are on root level of the clicked folder) to the rootFileTree array and combining all the files in subfolders in the subFileTree
           })
         }
       },
 
-      async rootFileSelect(node) { // This function is called by the v-treeview that shows the root files of a selected folder ("rootFileTree"). It resets the selection of nodes in the "subFileTree", calls the "readFile" function to show the selected file in the FilePanel and shows the index file of the folder when no node is selected at all
-        
-        // console.log("works")
+      async fileSelect(node) { // This function is called by the v-treeview that shows the root files of a selected folder ("rootFileTree"). It resets the selection of nodes in the "subFileTree", calls the "readFile" function to show the selected file in the FilePanel and shows the index file of the folder when no node is selected at all
 
-        if (node.length === 0) { // When de-selecting the node in the "rootFileTree" it is returning an empty array. With "node.length === 0" a deselection can be observed
-          console.log("entry de-selected")
-          this.rootFileSelected = false
-          if (this.rootFileSelected === false && this.subFileSelected == false) { // When neither in the rootFileTree nor in the subFileTree a node is selected, resetting the content of the FilePanel to the index of the selected folder
-            console.log("resetting index")
-            let file = await currentIndexfileHandle.getFile(); // "currentIndexfileHandle" was set in the "readIndexFile" function when searching for the index file while opening the folder initially
-            this.content = await file.text();
-          }
+        if (this.fileSelected === node.systemPath.join('/')) {
+          console.log("entry de-selected - resetting index")
+          this.fileSelected = ""
+          let file = await currentIndexfileHandle.getFile(); // "currentIndexfileHandle" was set in the "readIndexFile" function when searching for the index file while opening the folder initially
+          this.content = await file.text();
         }
         else {
-          this.subFileTreeActivity = [] // Resetting the active nodes of the subFileTree (if any)
-          this.rootFileSelected = true
-
-          get(node.systemPath.join('/') + '/' + node.name).then(async fileHandle => {
-            this.readFile(fileHandle)
-          })
-        }
-      },
-
-      async subFileSelect(node) { // This function is called by the v-treeview that shows the sub files of a selected folder ("subFileTree"). It resets the selection of nodes in the "rootFileTree", calls the "readFile" function to show the selected file in the FilePanel and shows the index file of the folder when no node is selected at all
-        if (node.length === 0) { // When de-selecting the node in the "subFileTree" it is returning an empty array. With "node.length === 0" a deselection can be observed
-          console.log("entry de-selected")
-          this.subFileSelected = false
-          if (this.rootFileSelected === false && this.subFileSelected == false) { // When neither in the subFileTree nor in the rootFileTree a node is selected, resetting the content of the FilePanel to the index of the selected folder
-            console.log("resetting index")
-            let file = await currentIndexfileHandle.getFile(); // "currentIndexfileHandle" was set in the "readIndexFile" function when searching for the index file while opening the folder initially
-            this.content = await file.text();
-          }
-        }
-        else {
-          this.rootFileTreeActivity = [] // Resetting the active nodes of the rootFileTree (if any)
-          this.subFileSelected = true
-
-          get(node[0].systemPath.join('/') + '/' + node[0].name).then(async fileHandle => {
+          this.fileSelected = node.systemPath.join('/')
+          get(node.systemPath.join('/')).then(async fileHandle => {
             this.readFile(fileHandle)
           })
         }
@@ -286,7 +262,7 @@
 
           let systemPath = await this.rootFolder.resolve(entry);
           // Save all fileHandlers in the IndexedDB not by id but by unique "path + filename"
-          set(systemPath.join('/') + '/' + entry.name, entry);
+          set(systemPath.join('/'), entry);
 
           // Declaring the Objects which is individually and recursivly pushed into the tree structure arrays
           let dirDataObj = {
@@ -300,12 +276,16 @@
           if (entry.kind === "directory") {
             folderTree.push(dirDataObj)
           }
+
+          if (cancelJob === true) {
+            return
+          }
         }
       },
 
       async getSubFolders(item) { // This function iterates through the response of the FileSystemAPI and saves the response into an array which has the right strucutre for the v-treeview component - Inspired by: https://www.youtube.com/watch?v=csCk4mrEmm8
 
-        return get(item.systemPath.join('/') + '/' + item.name).then(async dirHandle => { // return is necessary to make the treeview update correctly
+        return get(item.systemPath.join('/')).then(async dirHandle => { // return is necessary to make the treeview update correctly
           this.dirHandle = dirHandle
 
           for await (const entry of dirHandle.values()) {
@@ -314,7 +294,7 @@
 
             let systemPath = await this.rootFolder.resolve(entry);
             // Save all fileHandlers in the IndexedDB not by id but by unique "path + filename"
-            set(systemPath.join('/') + '/' + entry.name, entry);
+            set(systemPath.join('/'), entry);
 
             // Declaring the Objects which is individually and recursivly pushed into the tree structure arrays
             let dirDataObj = {
@@ -328,39 +308,47 @@
             if (entry.kind === "directory") {
               item.children.push(dirDataObj)
             }
+
+            if (cancelJob === true) {
+              return
+            }
           }
         })
       },
 
       async getRootFiles(dirHandle) {
+
+        for await (const entry of dirHandle.values()) {
           
-          for await (const entry of dirHandle.values()) {
-            
-            id++ // The id has to be incrimented at the beginning (not the end) of this loop because this "for" function is nested and multiple times recalled within itself befor finishing
+          id++ // The id has to be incrimented at the beginning (not the end) of this loop because this "for" function is nested and multiple times recalled within itself befor finishing
 
-            let systemPath = await this.rootFolder.resolve(entry);
-            // Save all fileHandlers in the IndexedDB not by id but by unique "path + filename"
-            set(systemPath.join('/') + '/' + entry.name, entry);
+          let systemPath = await this.rootFolder.resolve(entry);
+          // Save all fileHandlers in the IndexedDB not by id but by unique "path + filename"
+          set(systemPath.join('/'), entry);
 
-            // Declaring the Objects which is individually and recursivly pushed into the tree structure arrays
-            let fileObj = { // Objects which are pushed to the tree arrays for every entry from the FileSystemAPI - Array/Object structure: https://vuetifyjs.com/en/components/treeview/#api
-              id: id, // Unique id
-              name: entry.name, // Name that is shown in the v-treeview as title of the node
-              systemPath: systemPath.map((x) => x), // The systemPath has the following structure: "//folder/subfolder/etc." e. g. "//root/branch" (the own filename is excluded of the path but saved under value "name" above) - With the command join the apiPath array is transformed into a string and combined with the seperator '/' - This string is used to retrieve the fileHandlers from the IndexedDB in the funcitons "readFile" & "readIndexFile"
-              obj: "file",
-              children: []
-            };
+          // Declaring the Objects which is individually and recursivly pushed into the tree structure arrays
+          let fileObj = { // Objects which are pushed to the tree arrays for every entry from the FileSystemAPI - Array/Object structure: https://vuetifyjs.com/en/components/treeview/#api
+            id: id, // Unique id
+            name: entry.name, // Name that is shown in the v-treeview as title of the node
+            systemPath: systemPath.map((x) => x), // The systemPath has the following structure: "//folder/subfolder/etc." e. g. "//root/branch" (the own filename is excluded of the path but saved under value "name" above) - With the command join the apiPath array is transformed into a string and combined with the seperator '/' - This string is used to retrieve the fileHandlers from the IndexedDB in the funcitons "readFile" & "readIndexFile"
+            obj: "file",
+            children: []
+          };
 
-            if (entry.kind === "file") {
-              if (entry.name === indexName) {
-                console.log("index detected")
-                await this.readIndexFile(entry)
-              }
-              else {
-                rootFileTree.push(fileObj)
-              }
+          if (entry.kind === "file") {
+            if (entry.name === indexName) {
+              console.log("index detected")
+              await this.readIndexFile(entry)
+            }
+            else {
+              rootFileTree.push(fileObj)
             }
           }
+
+          if (cancelJob === true) {
+            return
+          }
+        }
       },
 
       async getSubFiles(dirHandle) {
@@ -372,7 +360,7 @@
           let systemPath = await this.rootFolder.resolve(entry);
 
           // Save all fileHandlers in the IndexedDB not by id but by unique "path + filename"
-          set(systemPath.join('/') + '/' + entry.name, entry);
+          set(systemPath.join('/'), entry);
 
           // Declaring the Object which is individually and recursivly pushed into the tree structure arrays
           let fileObj = { // Objects which are pushed to the tree arrays for every entry from the FileSystemAPI - Array/Object structure: https://vuetifyjs.com/en/components/treeview/#api
@@ -394,6 +382,10 @@
             nestedLevel++
             await this.getSubFiles(entry)
             nestedLevel--
+          }
+
+          if (cancelJob === true) {
+            return
           }
         }
       },
@@ -431,10 +423,6 @@
         let decrypted = this.$aes.decrypt(encrypted)
         console.log(decrypted) */
 
-/*        get(5).then((val) => console.log(val)); */
-
-        this.getSubFiles(this.dirHandle)
-
       },
     },
 
@@ -467,6 +455,7 @@
 
 .treeText {
   text-align: left;
+  color: red;
 }
 
 .folder {
