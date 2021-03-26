@@ -1,4 +1,7 @@
 TODO:
+  - Issues with the currentIndexFileHandle  .
+    - Reset the currentIndexFileHandle when opening a new folder
+    - Detect if the currentIndexFileHandle does not belong to the currently active folder!
   - Make some CSS to indicate that the data-table object was selected
   - As soon as id++ is removed from getRootFolders() the folderTree selection breaks. Why is that? If possible: Fix it and remove variabel id completely
   - save fileTree´s in IndexedDB

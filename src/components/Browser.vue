@@ -201,7 +201,11 @@
       async folderSelect(node) {
         // Cancel running jobs
         cancelJob = true
-        setTimeout(() => {  cancelJob = false }, 100);
+        setTimeout(() => { }, 100); // Somehow the function within the "{ }" is not run. Does not matter, because I can just run the function after the Timeout. Interesting whatsoever
+        cancelJob = false
+        
+        // Clear the FilePanel
+        this.content = ""
 
         while (rootFileTree.length > 0) { // The rootFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
           rootFileTree.pop();
@@ -218,13 +222,10 @@
           this.folderName = folderNameRoot // Resetting the folderName to the initial state (the folderName is used for the titles of the dividers in the FolderPanel)
         
           this.folderSelected = ""
-        
         }
         else {
           console.log(node[0].name + ' selected')
           this.folderName = node[0].name
-          // Clear the FilePanel
-          this.content = ""
           
           get(node[0].systemPath.join('/')).then(async dirHandle => {
             this.dirHandle = dirHandle
@@ -238,6 +239,7 @@
         if (this.fileSelected === node.systemPath.join('/')) {
           console.log("entry de-selected - resetting index")
           this.fileSelected = ""
+
           let file = await currentIndexfileHandle.getFile(); // "currentIndexfileHandle" was set in the "readIndexFile" function when searching for the index file while opening the folder initially
           this.content = await file.text();
         }
@@ -272,9 +274,9 @@
             folderTree.push(dirDataObj)
           }
 
-          if (cancelJob === true) {
+/*           if (cancelJob === true) {
             return
-          }
+          } */
         }
       },
 
@@ -339,7 +341,6 @@
               rootFileTree.push(fileObj)
             }
           }
-          console.log(rootFileTree)
           if (cancelJob === true) {
             return
           }
