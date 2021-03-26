@@ -140,12 +140,7 @@
         show,
         fileSelected,
         headers: [
-          {
-            text: 'Filename',
-            align: 'start',
-            sortable: false,
-            value: 'name',
-          },
+          { text: 'Filename', align: 'start', /* sortable: false, */ value: 'name' },
           { text: 'ID', value: 'id' },
           { text: 'Path', value: 'systemPath' },
           { text: 'Type', value: 'obj' },
@@ -344,7 +339,7 @@
               rootFileTree.push(fileObj)
             }
           }
-
+          console.log(rootFileTree)
           if (cancelJob === true) {
             return
           }
@@ -455,7 +450,6 @@
 
 .treeText {
   text-align: left;
-  color: red;
 }
 
 .folder {
@@ -469,6 +463,11 @@
 .header {
   display: block; /* float: left; & width: 100%; together have the same effect */
   text-align: left;
+}
+
+.v-data-table {
+  color: red;
+  text-decoration-color: blue;
 }
 
 </style>

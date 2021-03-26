@@ -1,6 +1,9 @@
 TODO:
   - Make some CSS to indicate that the data-table object was selected
   - As soon as id++ is removed from getRootFolders() the folderTree selection breaks. Why is that? If possible: Fix it and remove variabel id completely
+  - save fileTree´s in IndexedDB
+    - load them from IndexedDB if available
+    - if available load the array from fileSystem anyway, but in background. If changes are detected prompt "External changes have been detected. Reload the page"
 
 
 STORING API RESPONSES IN INDEXEDDB
