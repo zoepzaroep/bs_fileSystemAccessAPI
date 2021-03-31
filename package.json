@@ -10,6 +10,8 @@
   "dependencies": {
     "core-js": "^3.6.5",
     "idb-keyval": "^5.0.4",
+    "lodash": "^4.17.21",
+    "uuid": "^3.4.0",
     "vue": "^2.6.11",
     "vue-crypt": "^1.0.0",
     "vue-jstree": "^2.1.6",

@@ -1,12 +1,10 @@
 TODO:
-  - Issues with the currentIndexFileHandle  .
-    - Reset the currentIndexFileHandle when opening a new folder
-    - Detect if the currentIndexFileHandle does not belong to the currently active folder!
   - Make some CSS to indicate that the data-table object was selected
-  - As soon as id++ is removed from getRootFolders() the folderTree selection breaks. Why is that? If possible: Fix it and remove variabel id completely
   - save fileTree´s in IndexedDB
-    - load them from IndexedDB if available
-    - if available load the array from fileSystem anyway, but in background. If changes are detected prompt "External changes have been detected. Reload the page"
+    - if available load the array from fileSystem anyway, but in background: If changes are detected prompt "External changes have been detected. Reload the page"
+  - subFileTree issues:
+    - Repeadatly loading the subfiles just adds to the array
+    - subFileTree is not resettet when opening on another folder
 
 
 STORING API RESPONSES IN INDEXEDDB
