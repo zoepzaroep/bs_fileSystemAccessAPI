@@ -38,6 +38,28 @@
         <div class="header">
           FolderPanel
         </div>
+        <v-dialog
+          v-model="dialog"
+          persistent
+          max-width="290"
+        >
+          <v-card>
+            <v-card-title class="headline">
+              Changes on the file system
+            </v-card-title>
+            <v-card-text>Some files changed on the file system via external applications. The files were reloaded in the background.</v-card-text>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn
+                color="green darken-1"
+                text
+                @click="confirm = true"
+              >
+                Confirm
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
         <div>
           Files in the folder "{{selectedFolderName}}":
           <v-data-table
@@ -153,6 +175,8 @@
           { text: 'Type', value: 'obj' },
         ],
         selectedRows: [],
+        dialog: false,
+        confirm: false,
       }
     },
 
@@ -195,14 +219,14 @@
         while (folderTree.length > 0) {
           folderTree.pop();
         }
-        while (rootFileTree.length > 0) {
-          rootFileTree.pop();
+        while (this.rootFileTree.length > 0) {
+          this.rootFileTree.pop();
         }
         while (loadedRootFileTree.length > 0) { // The rootFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
           loadedRootFileTree.pop();
         }
-        while (subFileTree.length > 0) {
-          subFileTree.pop();
+        while (this.subFileTree.length > 0) {
+          this.subFileTree.pop();
         }
         while (loadedSubFileTree.length > 0) { // The subFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
           loadedSubFileTree.pop();
@@ -220,9 +244,13 @@
       },
 
       async showSubFiles(dirHandle) {   
-        while (subFileTree.length > 0) { // The subFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
-          subFileTree.pop();
+        while (this.subFileTree.length > 0) {
+          this.subFileTree.pop();
         }
+        while (loadedSubFileTree.length > 0) { // The subFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
+          loadedSubFileTree.pop();
+        }
+
         this.loadSubFiles(dirHandle)
       },
 
@@ -246,14 +274,14 @@
         // Clear the FilePanel
         this.content = ""
 
-        while (rootFileTree.length > 0) { // The rootFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
-          rootFileTree.pop();
+        while (this.rootFileTree.length > 0) { // The rootFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
+          this.rootFileTree.pop();
         }
         while (loadedRootFileTree.length > 0) { // The rootFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
           loadedRootFileTree.pop();
         }
-        while (subFileTree.length > 0) { // The subFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
-          subFileTree.pop();
+        while (this.subFileTree.length > 0) { // The subFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
+          this.subFileTree.pop();
         }
         while (loadedSubFileTree.length > 0) { // The subFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
           loadedSubFileTree.pop();
@@ -320,7 +348,7 @@
 
           // Declaring the Objects which is individually and recursivly pushed into the tree structure arrays
           let dirDataObj = {
-            id: uuidv4(),
+            id: uuidv4(), // A unique id is necessary for the v-treeview somehow. It is not necessary for the v-data-table however
             name: entry.name,
             systemPath: systemPath.map((x) => x), // see description under fileObj
             obj: "directory",
@@ -355,7 +383,7 @@
 
             // Declaring the Objects which is individually and recursivly pushed into the tree structure arrays
             let dirDataObj = {
-              id: uuidv4(),
+              id: uuidv4(), // A unique id is necessary for the v-treeview somehow. It is not necessary for the v-data-table however
               name: entry.name,
               systemPath: systemPath.map((x) => x), // see description under fileObj
               obj: "directory",
@@ -386,24 +414,15 @@
         // push to a temporary loadedRootFileTree
         await this.getRootFiles(dirHandle)
 
-
-        // Delete the id property of every object of the fileTrees because the id is unique. However we want to compare the two arrays for file changes. If we include the id in the comparison it always returns false
-        let tempLoadedRootFileTree = loadedRootFileTree
-        let tempRootFileTree = this.rootFileTree
-        
-        for (let i = 0, len = tempLoadedRootFileTree.length; i < len; i++) {
-          delete tempLoadedRootFileTree[i].id;
-        }
-        for (let i = 0, len = tempRootFileTree.length; i < len; i++) {
-          delete tempRootFileTree[i].id;
-        }
-
         if (this.rootFileTreeLoaded === true) {       
           // compare the saved rootFileTree with the newly loaded loadedRootFileTree
-          if (_.isEqual(tempLoadedRootFileTree, tempRootFileTree)) { // lowdash over stringify because of performance (JSON.stringify(rootFileTree) === JSON.stringify(loadedRootFileTree))
+          if (_.isEqual(loadedRootFileTree, this.rootFileTree)) { // lowdash over stringify because of performance (JSON.stringify(rootFileTree) === JSON.stringify(loadedRootFileTree))
             console.log('loaded from IndexedDB')
           }
-          else {  // If changes are detected, prompt to reload the tree and update IndexedDB
+          else {  // If changes are detected, prompt before reload the tree and update IndexedDB
+            this.dialog = true
+            this.awaitUpdate()
+
             console.log('loaded from FileSystemAPI and updated the IndexedDB')
             this.rootFileTree = loadedRootFileTree
             set('rootFileTree: ' + rootFileTreePath.join('/'), loadedRootFileTree);
@@ -412,7 +431,7 @@
           this.rootFileTreeLoaded = false
         }
         else {
-          console.log('loaded from FileSystemAPI')
+          console.log('loaded from FileSystemAPI and saved in the IndexedDB')
           this.rootFileTree = loadedRootFileTree
           set('rootFileTree: ' + rootFileTreePath.join('/'), loadedRootFileTree);
         }
@@ -434,7 +453,7 @@
 
           // Declaring the Objects which is individually and recursivly pushed into the tree structure arrays
           let fileObj = { // Objects which are pushed to the tree arrays for every entry from the FileSystemAPI - Array/Object structure: https://vuetifyjs.com/en/components/treeview/#api
-            id: uuidv4(), // Unique id
+            // id: uuidv4(), // Unique id should not be a property because the object is compared with a saved object in the loadRootFileTree function. A unique id would lead to not being able to detect changes because the objects are always different
             name: entry.name, // Name that is shown in the v-treeview as title of the node
             systemPath: systemPath.map((x) => x), // The systemPath has the following structure: "//folder/subfolder/etc." e. g. "//root/branch" (the own filename is excluded of the path but saved under value "name" above) - With the command join the apiPath array is transformed into a string and combined with the seperator '/' - This string is used to retrieve the fileHandlers from the IndexedDB in the funcitons "readFile" & "readIndexFile"
             obj: "file",
@@ -470,24 +489,15 @@
         // push to a temporary loadedSubFileTree
         await this.getSubFiles(dirHandle)
 
-
-        // Delete the id property of every object of the fileTrees because the id is unique. However we want to compare the two arrays for file changes. If we include the id in the comparison it always returns false
-        let tempLoadedSubFileTree = loadedSubFileTree
-        let tempSubFileTree = this.subFileTree
-        
-        for (let i = 0, len = tempLoadedSubFileTree.length; i < len; i++) {
-          delete tempLoadedSubFileTree[i].id;
-        }
-        for (let i = 0, len = tempSubFileTree.length; i < len; i++) {
-          delete tempSubFileTree[i].id;
-        }
-
         if (this.subFileTreeLoaded === true) {       
           // compare the saved subFileTree with the newly loaded loadedSubFileTree
-          if (_.isEqual(tempLoadedSubFileTree, tempSubFileTree)) { // lowdash over stringify because of performance (JSON.stringify(subFileTree) === JSON.stringify(loadedSubFileTree))
+          if (_.isEqual(loadedSubFileTree, this.subFileTree)) { // lowdash over stringify because of performance (JSON.stringify(subFileTree) === JSON.stringify(loadedSubFileTree))
             console.log('loaded from IndexedDB')
           }
-          else {  // If changes are detected, prompt to reload the tree and update IndexedDB
+          else {  // If changes are detected, prompt before reload the tree and update IndexedDB
+            this.dialog = true
+            this.awaitUpdate()
+  
             console.log('loaded from FileSystemAPI and updated the IndexedDB')
             this.subFileTree = loadedSubFileTree
             set('subFileTree: ' + subFileTreePath.join('/'), loadedSubFileTree);
@@ -519,7 +529,7 @@
 
           // Declaring the Object which is individually and recursivly pushed into the tree structure arrays
           let fileObj = { // Objects which are pushed to the tree arrays for every entry from the FileSystemAPI - Array/Object structure: https://vuetifyjs.com/en/components/treeview/#api
-            id: uuidv4(), // Unique id
+            // id: uuidv4(), // Unique id should not be a property because the object is compared with a saved object in the loadSubFileTree function. A unique id would lead to not being able to detect changes because the objects are always different
             name: entry.name, // Name that is shown in the v-treeview as title of the node
             systemPath: systemPath.map((x) => x), // The systemPath has the following structure: "//folder/subfolder/etc." e. g. "//root/branch" (the own filename is excluded of the path but saved under value "name" above) - With the command join the apiPath array is transformed into a string and combined with the seperator '/' - This string is used to retrieve the fileHandlers from the IndexedDB in the funcitons "readFile" & "readIndexFile"
             obj: "file",
@@ -554,6 +564,16 @@
         let writable = await this.fileHandle.createWritable(); // creating the fileHandler (for writing to the file system) from the currently selected file which is cached in "currentEntry" which was set in the "readFile" function
         await writable.write(this.content);
         await writable.close();
+      },
+
+      async awaitUpdate() {
+        if(this.confirm === false) {
+          setTimeout(() => this.awaitUpdate(), 1000);
+        }
+        else {
+          this.confirm = false
+          this.dialog = false
+        }
       },
 
       async test() { // Test-function to test various functions

@@ -1,10 +1,6 @@
 TODO:
   - Make some CSS to indicate that the data-table object was selected
-  - save fileTree´s in IndexedDB
-    - if available load the array from fileSystem anyway, but in background: If changes are detected prompt "External changes have been detected. Reload the page"
-  - subFileTree issues:
-    - Repeadatly loading the subfiles just adds to the array
-    - subFileTree is not resettet when opening on another folder
+  - Catch Error in loadRootFiles and loadSubFiles
 
 
 STORING API RESPONSES IN INDEXEDDB
