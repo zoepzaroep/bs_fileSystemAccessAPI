@@ -15,8 +15,8 @@
         </div>
         <div>
           <v-treeview
-            class="treeText"
             ref="folderTree"
+            class="treeText"
             v-if="show"
             dense
             :items="folderTree"
@@ -26,8 +26,11 @@
             :load-children="getSubFolders"
             @update:active="folderClick"
           >
-            <template slot="label" slot-scope="{ item }">
-              <a>{{ item.name }}</a>
+            <template v-slot:label="{ item }" >
+              <span>
+                <!-- The class has to be passed inside the span component (not the parent v-treeview component), otherwise the text color is not assigned -->
+                {{ item.name }}
+              </span>
             </template>
             <!-- "@update:active="itemClick"": Alternative way to trigger is via the template and "@click". This however only triggers if the label (text) is clicked diretcly not when clicked on the whole row besides the text. Source: https://stackoverflow.com/questions/54719453/how-to-bind-an-event-to-a-treeview-node-in-vuetify/54719701 -->
             <!-- "return-object": Makes the treeview return the whole object (not only the id) in events like @update. Here: the whole object is passed through to the function called by "@update:active". There the values of the object can be accessed under index "0". Hence the values are called from "node[0]" -->
@@ -60,19 +63,21 @@
             </v-card-actions>
           </v-card>
         </v-dialog>
+        
         <div>
           Files in the folder "{{selectedFolderName}}":
           <v-data-table
-            class="treeText"
             ref="rootFileTree"
+            class="treeText"
             v-if="show"
             :headers="headers"
+            hide-default-footer
+            :items-per-page="-1"
             :items="rootFileTree"
           >
             <template v-slot:item="{ item }">
               <tr @click="fileClick(item)">
                 <td>{{item.name}}</td>
-                <td>{{item.id}}</td>
                 <td>{{item.systemPath.join('/')}}</td>
                 <td>{{item.obj}}</td>
               </tr>
@@ -84,24 +89,26 @@
           Files in the subfolders of "{{selectedFolderName}}":
           <v-btn v-on:click="showSubFiles(dirHandle)">Show Subfiles</v-btn>
           <v-data-table
-            class="treeText"
             ref="subFileTree"
+            class="treeText"
             v-if="show"
             :headers="headers"
+            hide-default-footer
+            :items-per-page="-1"
             :items="subFileTree"
           >
             <template v-slot:item="{ item }">
-              <tr @click="fileClick(item)">
-                <td>{{item.name}}</td>
-                <td>{{item.id}}</td>
-                <td>{{item.systemPath.join('/')}}</td>
-                <td>{{item.obj}}</td>
+              <tr @click="fileClick( item )">
+                <td>{{ item.name }}</td>
+                <td>{{ item.systemPath.join('/') }}</td>
+                <td>{{ item.obj }}</td>
               </tr>
             </template>
             <!-- Source: https://stackoverflow.com/questions/59313008/select-rows-in-vuetify-data-table -->
           </v-data-table>
         </div>
       </div>
+      
       <div class="column file">
         <div class="header">
           FilePanel
@@ -114,6 +121,7 @@
           </v-textarea>
         </div>
       </div>
+
     </div>
   </v-app>
 </template>
@@ -170,7 +178,6 @@
         selectedFolderName,
         headers: [
           { text: 'Filename', align: 'start', /* sortable: false, */ value: 'name' },
-          { text: 'ID', value: 'id' },
           { text: 'Path', value: 'systemPath' },
           { text: 'Type', value: 'obj' },
         ],
@@ -181,6 +188,10 @@
     },
 
     methods: {
+
+      itemRowBackground: function (item) {
+        return item.obj === "file" ? 'style-1' : 'style-2'
+      },
 
       async openFile() { // Template to open a single file from the system via the FileSystemAPI - Source: https://web.dev/file-system-access/
         let [fileHandle] = await window.showOpenFilePicker();
@@ -231,12 +242,13 @@
         while (loadedSubFileTree.length > 0) { // The subFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
           loadedSubFileTree.pop();
         }
+        set('rootFileTree: ', []); // The filetree of the root level of a folder always got the same path - an empty array. That´s why the root level of folder is always loaded from IndexedDB even though a completely different folder was opened before. This way the root level entry of the IndexedDB is resettet
 
         this.rootFolder = await window.showDirectoryPicker() // Files and folders come alphabetically from the FileSystemAPI (not sorted by files or folders)
         this.dirHandle = this.rootFolder
         await this.getRootFolders(this.dirHandle) // Passing the response of the FileSystemAPI down to the "getRootFolders" function where the whole folder is iterated through
 
-        this.loadRootFiles(this.dirHandle)
+        await this.loadRootFiles(this.dirHandle)
 
         this.show = true // Making the v-treeview modules in the template visible
 
@@ -636,9 +648,24 @@
   text-align: left;
 }
 
-.v-data-table {
+.v-data-table tr {
+  background-color: rgba(142, 255, 108, 0.308) !important;
   color: red;
-  text-decoration-color: blue;
+  font-weight: 700;
+}
+
+.v-treeview span {
+  background-color: rgba(108, 160, 255, 0.308) !important;
+  color: red;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.style-1 {
+  background-color: rgb(215,215,44)
+}
+.style-2 {
+  background-color: rgb(114,114,67)
 }
 
 </style>

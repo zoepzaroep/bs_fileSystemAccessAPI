@@ -1,6 +1,11 @@
 TODO:
   - Make some CSS to indicate that the data-table object was selected
   - Catch Error in loadRootFiles and loadSubFiles
+  - Implement multiple folder concept:
+    - Select desired first folder on Startscreen and continue from there
+    - folder name of the root folder is displayed in the Treeview
+    - possible to open another folder of a completely different location from the file system
+    - maybe color code different folder of different locations?
 
 
 STORING API RESPONSES IN INDEXEDDB
