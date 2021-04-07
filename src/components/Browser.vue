@@ -430,7 +430,7 @@
       async loadRootFiles(dirHandle) {
         let rootFileTreePath = await this.rootFolder.resolve(dirHandle);
 
-        get('rootFileTree: ' + rootFileTreePath.join('/')).then(async savedRootFileTree => {
+        get(this.rootFolder.name + ' rootFileTree: ' + rootFileTreePath.join('/')).then(async savedRootFileTree => {
           // Catch Error here: If there is no IndexedDB entry yet, first time this "get" function is called, an error is trown coz savedRootFileTree is undefined
           try {
             if (savedRootFileTree.length > 0) {
@@ -510,7 +510,7 @@
       async loadSubFiles(dirHandle) {
         let subFileTreePath = await this.rootFolder.resolve(dirHandle);
 
-        get('subFileTree: ' + subFileTreePath.join('/')).then(async savedSubFileTree => {
+        get(this.rootFolder.name + ' subFileTree: ' + subFileTreePath.join('/')).then(async savedSubFileTree => {
           // Catch Error here: If there is no IndexedDB entry yet, first time this "get" function is called, an error is trown coz savedRootFileTree is undefined
           try {
             if (savedSubFileTree.length > 0) {
