@@ -26,8 +26,8 @@
             :load-children="getSubFolders"
             @update:active="folderClick"
           >
-            <template v-slot:label="{ item }" >
-              <span>
+            <template v-slot:label="{ item }">
+              <span class="treeText" :class="{'treeTextSelected': item.id === selectedFolder}">
                 <!-- The class has to be passed inside the span component (not the parent v-treeview component), otherwise the text color is not assigned -->
                 {{ item.name }}
               </span>
@@ -68,20 +68,20 @@
           Files in the folder "{{selectedFolderName}}":
           <v-data-table
             ref="rootFileTree"
-            class="treeText"
             v-if="show"
             :headers="headers"
             hide-default-footer
             :items-per-page="-1"
             :items="rootFileTree"
           >
-            <template v-slot:item="{ item }">
-              <tr @click="fileClick(item)">
+            <template v-slot:item="{ item, index }">
+              <tr @click="fileClick(item)" :key="index" class="dataText" :class="{'dataTextSelected': item.id === selectedFile}">
                 <td>{{item.name}}</td>
                 <td>{{item.systemPath.join('/')}}</td>
                 <td>{{item.obj}}</td>
               </tr>
             </template>
+            <!-- @click makes custom syling not being applied on the first row. Have to define the key property to make that work - Source: https://www.reddit.com/r/vuetifyjs/comments/iv721e/click_causing_first_tablerow_item_in_vdatatable/ -->
             <!-- Source: https://stackoverflow.com/questions/59313008/select-rows-in-vuetify-data-table -->
           </v-data-table>
         </div>
@@ -90,20 +90,20 @@
           <v-btn v-on:click="showSubFiles(dirHandle)">Show Subfiles</v-btn>
           <v-data-table
             ref="subFileTree"
-            class="treeText"
             v-if="show"
             :headers="headers"
             hide-default-footer
             :items-per-page="-1"
             :items="subFileTree"
           >
-            <template v-slot:item="{ item }">
-              <tr @click="fileClick( item )">
+            <template v-slot:item="{ item, index }">
+              <tr @click="fileClick(item)" :key="index" class="dataText" :class="{'dataTextSelected': item.id === selectedFile}">
                 <td>{{ item.name }}</td>
                 <td>{{ item.systemPath.join('/') }}</td>
                 <td>{{ item.obj }}</td>
               </tr>
             </template>
+            <!-- @click makes custom syling not being applied on the first row. Have to define the key property to make that work - Source: https://www.reddit.com/r/vuetifyjs/comments/iv721e/click_causing_first_tablerow_item_in_vdatatable/ -->
             <!-- Source: https://stackoverflow.com/questions/59313008/select-rows-in-vuetify-data-table -->
           </v-data-table>
         </div>
@@ -130,7 +130,7 @@
 
   // import store from "@/store";
   import { get, set } from 'idb-keyval';
-  import { v4 as uuidv4 } from 'uuid';
+  // import { v4 as uuidv4 } from 'uuid';
   import _ from 'lodash';
   
   // Declaring a varibale here makes it available for all methods below but not for the template above (therefore the variable has to be returned below)
@@ -146,10 +146,10 @@
   let subFileTreeLoaded = false;
   let content = "";
   let show = false;
-  let selectedFolder = [];
+  let selectedFolder = -1;
   let folderNameRoot = "/"; // Is used to reset the selectedFolderName to its initial state "/" within the "openRootFolder" and the "itemClick" function
   let selectedFolderName = folderNameRoot; // Is assigned the name of the currently opened folder in the "itemClick" function. The selectedFolderName is used for the titles of the dividers in the FolderPanel. Initially "/" symbolises the root level.
-  let selectedFile = [];
+  let selectedFile = -1;
   let indexName = "bs_index.txt";
   let nestedLevel = 0; // getSubFiles() detect if on root level of the folder or sub level (to not add root level files to the subFilesTree)
   let cancelJob = false;
@@ -189,10 +189,6 @@
 
     methods: {
 
-      itemRowBackground: function (item) {
-        return item.obj === "file" ? 'style-1' : 'style-2'
-      },
-
       async openFile() { // Template to open a single file from the system via the FileSystemAPI - Source: https://web.dev/file-system-access/
         let [fileHandle] = await window.showOpenFilePicker();
         const file = await fileHandle.getFile();
@@ -222,8 +218,8 @@
         cancelJob = false
         this.show = false // Resetting the visibility of the v-treeview modules in the template. If this is not done prior to assigning new data arrays (when opening a new folder after already showing one), the new v-treeview´s will intially show all nodes collapsed even though the attribute "open-all" is assigned to them
         this.selectedFolderName = folderNameRoot // Resetting the selectedFolderName to the initial state (the folder name is used for the titles of the dividers in the FolderPanel)
-        this.selectedFolder = []
-        this.selectedFile = []
+        this.selectedFolder = -1
+        this.selectedFile = -1
         this.content = ""
 
         // Resetting all arrays: According to the internet, this is performance wise the fastest way to truly empty an array. Funny enough, this is also the only way updating the vue-jstree works after emptying the array. The most intuitive command "dataTree = []" empties the array but somehow does not always trigger the data update of components in the template (sometimes emptying works but on re-filling update is broken again). No idea why - search the whole internet for hours for this issue
@@ -242,9 +238,15 @@
         while (loadedSubFileTree.length > 0) { // The subFileTree array is becoming entry´s pushed into. This array has to be emptied everytime the function is called
           loadedSubFileTree.pop();
         }
-        set('rootFileTree: ', []); // The filetree of the root level of a folder always got the same path - an empty array. That´s why the root level of folder is always loaded from IndexedDB even though a completely different folder was opened before. This way the root level entry of the IndexedDB is resettet
 
-        this.rootFolder = await window.showDirectoryPicker() // Files and folders come alphabetically from the FileSystemAPI (not sorted by files or folders)
+        try {
+          this.rootFolder = await window.showDirectoryPicker() // Files and folders come alphabetically from the FileSystemAPI (not sorted by files or folders)
+        }
+        catch(err) {
+          console.log("The directory picker was not executed by a user gesture. To open a new folder anyway, use the button")
+          return
+        }
+
         this.dirHandle = this.rootFolder
         await this.getRootFolders(this.dirHandle) // Passing the response of the FileSystemAPI down to the "getRootFolders" function where the whole folder is iterated through
 
@@ -267,6 +269,9 @@
       },
 
       async folderClick(node) {
+
+        // de-select the files in the v-data-table
+        this.selectedFile = -1
 
         // Cancel running jobs
         if (runningJobs > 0) {
@@ -306,12 +311,12 @@
           this.dirHandle = this.rootFolder // Necessary to save it in the dirHandler coz getSubFiles() may use the dirHandle at a later point in time
           this.loadRootFiles(this.dirHandle)
           this.selectedFolderName = folderNameRoot // Resetting the selectedFolderName to the initial state (the folder name is used for the titles of the dividers in the FolderPanel)
-          this.selectedFolder = []
+          this.selectedFolder = -1
         }
         else {
           console.log(node[0].name + ' selected')
           this.selectedFolderName = node[0].name
-          this.selectedFolder = node[0].systemPath.map((x) => x)
+          this.selectedFolder = node[0].id
           
           get(node[0].systemPath.join('/')).then(async dirHandle => {
             this.dirHandle = dirHandle
@@ -322,21 +327,29 @@
 
       async fileClick(node) { // This function is called by the v-treeview that shows the root files of a selected folder ("rootFileTree"). It resets the selection of nodes in the "subFileTree", calls the "readFile" function to show the selected file in the FilePanel and shows the index file of the folder when no node is selected at all
 
-        if (this.selectedFile.join('/') === node.systemPath.join('/')) {
+        if (this.selectedFile === node.systemPath.join('/')) {
           
           console.log("entry de-selected - resetting index")
-          this.selectedFile = []
+          this.selectedFile = -1;
+          this.$set(node, 'selected', false)
 
-          let folderPath = this.selectedFolder.map((x) => x)
-          folderPath.push(indexName)
-          let indexPath = folderPath.join('/'); // Make indexPath out of the indexName and the path of the current folder
+          // Make path out of the indexName and the path of the current folder
+          let folderPath
+          if (this.selectedFolder === -1) {
+            folderPath = indexName
+          }
+          else {
+            folderPath = this.selectedFolder + '/' + indexName
+          }
 
-          get(indexPath).then(async fileHandle => {
+          get(folderPath).then(async fileHandle => {
             this.readFile(fileHandle)
           })
+          
         }
         else {
-          this.selectedFile = node.systemPath
+          this.selectedFile = node.id;
+          this.$set(node, 'selected', true)
 
           get(node.systemPath.join('/')).then(async fileHandle => {
             this.readFile(fileHandle)
@@ -360,7 +373,8 @@
 
           // Declaring the Objects which is individually and recursivly pushed into the tree structure arrays
           let dirDataObj = {
-            id: uuidv4(), // A unique id is necessary for the v-treeview somehow. It is not necessary for the v-data-table however
+            // id: uuidv4(), // A unique id is necessary for the v-treeview somehow. It is not necessary for the v-data-table however
+            id: systemPath.join('/'),
             name: entry.name,
             systemPath: systemPath.map((x) => x), // see description under fileObj
             obj: "directory",
@@ -395,7 +409,8 @@
 
             // Declaring the Objects which is individually and recursivly pushed into the tree structure arrays
             let dirDataObj = {
-              id: uuidv4(), // A unique id is necessary for the v-treeview somehow. It is not necessary for the v-data-table however
+              // id: uuidv4(), // A unique id is necessary for the v-treeview somehow. It is not necessary for the v-data-table however
+              id: systemPath.join('/'),
               name: entry.name,
               systemPath: systemPath.map((x) => x), // see description under fileObj
               obj: "directory",
@@ -417,9 +432,14 @@
 
         get('rootFileTree: ' + rootFileTreePath.join('/')).then(async savedRootFileTree => {
           // Catch Error here: If there is no IndexedDB entry yet, first time this "get" function is called, an error is trown coz savedRootFileTree is undefined
-          if (savedRootFileTree.length > 0) {
-            this.rootFileTree = savedRootFileTree
-            this.rootFileTreeLoaded = true
+          try {
+            if (savedRootFileTree.length > 0) {
+              this.rootFileTree = savedRootFileTree
+              this.rootFileTreeLoaded = true
+            }
+          }
+          catch(err) {
+            console.log("no IndexedDB entry yet")
           }
         })
 
@@ -437,7 +457,7 @@
 
             console.log('loaded from FileSystemAPI and updated the IndexedDB')
             this.rootFileTree = loadedRootFileTree
-            set('rootFileTree: ' + rootFileTreePath.join('/'), loadedRootFileTree);
+            set(this.rootFolder.name + ' rootFileTree: ' + rootFileTreePath.join('/'), loadedRootFileTree);
           }
 
           this.rootFileTreeLoaded = false
@@ -445,7 +465,7 @@
         else {
           console.log('loaded from FileSystemAPI and saved in the IndexedDB')
           this.rootFileTree = loadedRootFileTree
-          set('rootFileTree: ' + rootFileTreePath.join('/'), loadedRootFileTree);
+          set(this.rootFolder.name + ' rootFileTree: ' + rootFileTreePath.join('/'), loadedRootFileTree);
         }
       },
 
@@ -465,7 +485,7 @@
 
           // Declaring the Objects which is individually and recursivly pushed into the tree structure arrays
           let fileObj = { // Objects which are pushed to the tree arrays for every entry from the FileSystemAPI - Array/Object structure: https://vuetifyjs.com/en/components/treeview/#api
-            // id: uuidv4(), // Unique id should not be a property because the object is compared with a saved object in the loadRootFileTree function. A unique id would lead to not being able to detect changes because the objects are always different
+            id: systemPath.join('/'),
             name: entry.name, // Name that is shown in the v-treeview as title of the node
             systemPath: systemPath.map((x) => x), // The systemPath has the following structure: "//folder/subfolder/etc." e. g. "//root/branch" (the own filename is excluded of the path but saved under value "name" above) - With the command join the apiPath array is transformed into a string and combined with the seperator '/' - This string is used to retrieve the fileHandlers from the IndexedDB in the funcitons "readFile" & "readIndexFile"
             obj: "file",
@@ -491,10 +511,15 @@
         let subFileTreePath = await this.rootFolder.resolve(dirHandle);
 
         get('subFileTree: ' + subFileTreePath.join('/')).then(async savedSubFileTree => {
-          // Catch Error here: If there is no IndexedDB entry yet, first time this "get" function is called, an error is trown coz savedSubFileTree is undefined
-          if (savedSubFileTree.length > 0) {
-            this.subFileTree = savedSubFileTree
-            this.subFileTreeLoaded = true
+          // Catch Error here: If there is no IndexedDB entry yet, first time this "get" function is called, an error is trown coz savedRootFileTree is undefined
+          try {
+            if (savedSubFileTree.length > 0) {
+              this.subFileTree = savedSubFileTree
+              this.subFileTreeLoaded = true
+            }
+          }
+          catch(err) {
+            console.log("no IndexedDB entry yet")
           }
         })
 
@@ -512,7 +537,7 @@
   
             console.log('loaded from FileSystemAPI and updated the IndexedDB')
             this.subFileTree = loadedSubFileTree
-            set('subFileTree: ' + subFileTreePath.join('/'), loadedSubFileTree);
+            set(this.rootFolder.name + ' subFileTree: ' + subFileTreePath.join('/'), loadedSubFileTree);
           }
 
           this.subFileTreeLoaded = false
@@ -520,7 +545,7 @@
         else {
           console.log('loaded from FileSystemAPI')
           this.subFileTree = loadedSubFileTree
-          set('subFileTree: ' + subFileTreePath.join('/'), loadedSubFileTree);
+          set(this.rootFolder.name + ' subFileTree: ' + subFileTreePath.join('/'), loadedSubFileTree);
         }
       },
 
@@ -541,7 +566,7 @@
 
           // Declaring the Object which is individually and recursivly pushed into the tree structure arrays
           let fileObj = { // Objects which are pushed to the tree arrays for every entry from the FileSystemAPI - Array/Object structure: https://vuetifyjs.com/en/components/treeview/#api
-            // id: uuidv4(), // Unique id should not be a property because the object is compared with a saved object in the loadSubFileTree function. A unique id would lead to not being able to detect changes because the objects are always different
+            id: systemPath.join('/'),
             name: entry.name, // Name that is shown in the v-treeview as title of the node
             systemPath: systemPath.map((x) => x), // The systemPath has the following structure: "//folder/subfolder/etc." e. g. "//root/branch" (the own filename is excluded of the path but saved under value "name" above) - With the command join the apiPath array is transformed into a string and combined with the seperator '/' - This string is used to retrieve the fileHandlers from the IndexedDB in the funcitons "readFile" & "readIndexFile"
             obj: "file",
@@ -605,12 +630,7 @@
     },
 
     created: function () {
-      window.addEventListener('keydown', e => {
-        if (e.key === 's' && e.metaKey){
-          e.preventDefault();
-          this.saveFile()
-        }
-      })     
+      this.openFolderClick()
     },
 
     destroyed: function () {
@@ -631,10 +651,6 @@
   width: 25%; /* 25% of the whole window */
 }
 
-.treeText {
-  text-align: left;
-}
-
 .folder {
   width: 25%; /* 25% of the whole window */
 }
@@ -648,24 +664,35 @@
   text-align: left;
 }
 
-.v-data-table tr {
-  background-color: rgba(142, 255, 108, 0.308) !important;
-  color: red;
-  font-weight: 700;
+.v-data-table {
+  background-color: rgba(142, 255, 108, 0.158) !important;
 }
 
-.v-treeview span {
+.v-treeview {
   background-color: rgba(108, 160, 255, 0.308) !important;
-  color: red;
-  font-size: 20px;
+}
+
+.dataText {
+  text-align: left;
+  color: rgb(0, 0, 0);
+}
+
+.dataTextSelected {
+  text-align: left;
+  color: rgb(43, 151, 0);
   font-weight: 700;
 }
 
-.style-1 {
-  background-color: rgb(215,215,44)
+.treeText {
+  text-align: left;
+  color: rgb(0, 0, 0);
+  font-size: 15px;
 }
-.style-2 {
-  background-color: rgb(114,114,67)
+
+.treeTextSelected {
+  text-align: left;
+  color: rgb(0, 41, 153);
+  font-weight: 700;
 }
 
 </style>
