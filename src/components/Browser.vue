@@ -20,18 +20,20 @@
             v-if="show"
             dense
             :items="folderTree"
+            item-key="id"
+            :open.sync="openIds"
             activatable
             hoverable
-            return-object
             :load-children="getSubFolders"
             @update:active="folderClick"
           >
             <template v-slot:label="{ item }">
-              <span class="treeText" :class="{'treeTextSelected': item.id === selectedFolder}">
+              <span class="treeText" :class="{'treeTextSelected': item.id.toString() === selectedFolder}">
                 <!-- The class has to be passed inside the span component (not the parent v-treeview component), otherwise the text color is not assigned -->
                 {{ item.name }}
               </span>
             </template>
+            <!-- Return whole objects somehow interferes with the :open property. When returning the whole object the array under ":open" which indicates which nodes are opened is immun agains changes from outside the treeview. When not returning the whole object but just saving the id of the nodes in the ":open" array, it does work -->
             <!-- "@update:active="itemClick"": Alternative way to trigger is via the template and "@click". This however only triggers if the label (text) is clicked diretcly not when clicked on the whole row besides the text. Source: https://stackoverflow.com/questions/54719453/how-to-bind-an-event-to-a-treeview-node-in-vuetify/54719701 -->
             <!-- "return-object": Makes the treeview return the whole object (not only the id) in events like @update. Here: the whole object is passed through to the function called by "@update:active". There the values of the object can be accessed under index "0". Hence the values are called from "node[0]" -->
           </v-treeview>
@@ -65,7 +67,7 @@
         </v-dialog>
         
         <div>
-          Files in the folder "{{selectedFolderName}}":
+          Files in the folder "{{selectedFolder}}":
           <v-data-table
             ref="rootFileTree"
             v-if="show"
@@ -86,7 +88,7 @@
           </v-data-table>
         </div>
         <div>
-          Files in the subfolders of "{{selectedFolderName}}":
+          Files in the subfolders of "{{selectedFolder}}":
           <v-btn v-on:click="showSubFiles(dirHandle)">Show Subfiles</v-btn>
           <v-data-table
             ref="subFileTree"
@@ -146,9 +148,9 @@
   let subFileTreeLoaded = false;
   let content = "";
   let show = false;
+  let openIds = [];
+  let tempNode = "";
   let selectedFolder = -1;
-  let folderNameRoot = "/"; // Is used to reset the selectedFolderName to its initial state "/" within the "openRootFolder" and the "itemClick" function
-  let selectedFolderName = folderNameRoot; // Is assigned the name of the currently opened folder in the "itemClick" function. The selectedFolderName is used for the titles of the dividers in the FolderPanel. Initially "/" symbolises the root level.
   let selectedFile = -1;
   let indexName = "bs_index.txt";
   let nestedLevel = 0; // getSubFiles() detect if on root level of the folder or sub level (to not add root level files to the subFilesTree)
@@ -173,9 +175,9 @@
         subFileTreeLoaded,
         content,
         show,
+        openIds,
         selectedFile,
         selectedFolder,
-        selectedFolderName,
         headers: [
           { text: 'Filename', align: 'start', /* sortable: false, */ value: 'name' },
           { text: 'Path', value: 'systemPath' },
@@ -217,9 +219,9 @@
         
         cancelJob = false
         this.show = false // Resetting the visibility of the v-treeview modules in the template. If this is not done prior to assigning new data arrays (when opening a new folder after already showing one), the new v-treeview´s will intially show all nodes collapsed even though the attribute "open-all" is assigned to them
-        this.selectedFolderName = folderNameRoot // Resetting the selectedFolderName to the initial state (the folder name is used for the titles of the dividers in the FolderPanel)
         this.selectedFolder = -1
         this.selectedFile = -1
+        this.openIds = []
         this.content = ""
 
         // Resetting all arrays: According to the internet, this is performance wise the fastest way to truly empty an array. Funny enough, this is also the only way updating the vue-jstree works after emptying the array. The most intuitive command "dataTree = []" empties the array but somehow does not always trigger the data update of components in the template (sometimes emptying works but on re-filling update is broken again). No idea why - search the whole internet for hours for this issue
@@ -272,7 +274,7 @@
 
         // de-select the files in the v-data-table
         this.selectedFile = -1
-
+        
         // Cancel running jobs
         if (runningJobs > 0) {
           cancelJob = true
@@ -310,15 +312,19 @@
 
           this.dirHandle = this.rootFolder // Necessary to save it in the dirHandler coz getSubFiles() may use the dirHandle at a later point in time
           this.loadRootFiles(this.dirHandle)
-          this.selectedFolderName = folderNameRoot // Resetting the selectedFolderName to the initial state (the folder name is used for the titles of the dividers in the FolderPanel)
           this.selectedFolder = -1
         }
         else {
-          console.log(node[0].name + ' selected')
-          this.selectedFolderName = node[0].name
-          this.selectedFolder = node[0].id
-          
-          get(node[0].systemPath.join('/')).then(async dirHandle => {
+          console.log(node.toString() + ' selected')
+          this.selectedFolder = node.toString()
+
+          tempNode = node.toString()
+          // The following code saves the clicked node in the openIds array, hence opens/expands the node. However this change is not persistent (seems to be a bug), due to the childrens array still being empty coz of lazy loading. Thats why this code has to be run again after the children are loaded to be persistent
+          if (this.openIds.flat().includes(tempNode) === false) { // Check if the node is already included in the openIds array. The openIds array is a nested array, hence the array has to be flattened first before checking if the node.toString is included in the openIds array
+            this.openIds.push(tempNode) // Open the node to load the subfolders
+          }
+
+          get(node.toString()).then(async dirHandle => {
             this.dirHandle = dirHandle
             this.loadRootFiles(dirHandle) // Adding all the files (that are on root level of the clicked folder) to the rootFileTree array and combining all the files in subfolders in the subFileTree
           })
@@ -327,7 +333,7 @@
 
       async fileClick(node) { // This function is called by the v-treeview that shows the root files of a selected folder ("rootFileTree"). It resets the selection of nodes in the "subFileTree", calls the "readFile" function to show the selected file in the FilePanel and shows the index file of the folder when no node is selected at all
 
-        if (this.selectedFile === node.systemPath.join('/')) {
+        if (this.selectedFile === node.id) {
           
           console.log("entry de-selected - resetting index")
           this.selectedFile = -1;
@@ -351,7 +357,7 @@
           this.selectedFile = node.id;
           this.$set(node, 'selected', true)
 
-          get(node.systemPath.join('/')).then(async fileHandle => {
+          get(node.id).then(async fileHandle => {
             this.readFile(fileHandle)
           })
         }
@@ -369,6 +375,7 @@
 
           let systemPath = await this.rootFolder.resolve(entry);
           // Save all fileHandlers in the IndexedDB not by random id but by unique "path + filename"
+          
           set(systemPath.join('/'), entry);
 
           // Declaring the Objects which is individually and recursivly pushed into the tree structure arrays
@@ -420,6 +427,10 @@
             if (entry.kind === "directory") {
               item.children.push(dirDataObj)
             }
+          }
+          // The following code saves the clicked node in the openIds array, hence opens/expands the node. This was done before in the folderClicked function already, however at thtat stage it is not persistent (seems to be a bug), due to the childrens array still being empty at the earlier stage coz of lazy loading. Thats why this code has to be run again after the children are loaded here to be persistent
+          if (this.openIds.flat().includes(tempNode) === false) { // Check if the node is already included in the openIds array. The openIds array is a nested array, hence the array has to be flattened first before checking if the node.toString is included in the openIds array
+            this.openIds.push(tempNode) // Open the node to load the subfolders
           }
 
           runningJobs--
@@ -691,7 +702,7 @@
 
 .treeTextSelected {
   text-align: left;
-  color: rgb(0, 41, 153);
+  color: rgb(72, 121, 255);
   font-weight: 700;
 }
 
