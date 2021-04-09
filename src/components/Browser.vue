@@ -16,8 +16,8 @@
         <div>
           <v-treeview
             ref="folderTree"
-            class="treeText"
-            v-if="show"
+            class="folderTree"
+            v-if="showTree"
             dense
             :items="folderTree"
             item-key="id"
@@ -28,10 +28,10 @@
             @update:active="folderClick"
           >
             <template v-slot:label="{ item }">
-              <span class="treeText" :class="{'treeTextSelected': item.id.toString() === selectedFolder}">
+              <div class="treeNode" :class="{'treeNodeSelected': item.id.toString() === selectedFolder}">
                 <!-- The class has to be passed inside the span component (not the parent v-treeview component), otherwise the text color is not assigned -->
                 {{ item.name }}
-              </span>
+              </div>
             </template>
             <!-- Return whole objects somehow interferes with the :open property. When returning the whole object the array under ":open" which indicates which nodes are opened is immun agains changes from outside the treeview. When not returning the whole object but just saving the id of the nodes in the ":open" array, it does work -->
             <!-- "@update:active="itemClick"": Alternative way to trigger is via the template and "@click". This however only triggers if the label (text) is clicked diretcly not when clicked on the whole row besides the text. Source: https://stackoverflow.com/questions/54719453/how-to-bind-an-event-to-a-treeview-node-in-vuetify/54719701 -->
@@ -70,17 +70,17 @@
           Files in the folder "{{selectedFolder}}":
           <v-data-table
             ref="rootFileTree"
-            v-if="show"
+            v-if="showRootFileTree"
             :headers="headers"
             hide-default-footer
             :items-per-page="-1"
             :items="rootFileTree"
           >
             <template v-slot:item="{ item, index }">
-              <tr @click="fileClick(item)" :key="index" class="dataText" :class="{'dataTextSelected': item.id === selectedFile}">
+              <tr @click="fileClick(item)" :key="index" class="dataNode" :class="{'dataNodeSelected': item.id === selectedFile}">
                 <td>{{item.name}}</td>
                 <td>{{item.systemPath.join('/')}}</td>
-                <td>{{item.obj}}</td>
+                <td>{{item.type}}</td>
               </tr>
             </template>
             <!-- @click makes custom syling not being applied on the first row. Have to define the key property to make that work - Source: https://www.reddit.com/r/vuetifyjs/comments/iv721e/click_causing_first_tablerow_item_in_vdatatable/ -->
@@ -92,17 +92,17 @@
           <v-btn v-on:click="showSubFiles(dirHandle)">Show Subfiles</v-btn>
           <v-data-table
             ref="subFileTree"
-            v-if="show"
+            v-if="showSubFileTree"
             :headers="headers"
             hide-default-footer
             :items-per-page="-1"
             :items="subFileTree"
           >
             <template v-slot:item="{ item, index }">
-              <tr @click="fileClick(item)" :key="index" class="dataText" :class="{'dataTextSelected': item.id === selectedFile}">
+              <tr @click="fileClick(item)" :key="index" class="dataNode" :class="{'dataNodeSelected': item.id === selectedFile}">
                 <td>{{ item.name }}</td>
                 <td>{{ item.systemPath.join('/') }}</td>
-                <td>{{ item.obj }}</td>
+                <td>{{ item.type }}</td>
               </tr>
             </template>
             <!-- @click makes custom syling not being applied on the first row. Have to define the key property to make that work - Source: https://www.reddit.com/r/vuetifyjs/comments/iv721e/click_causing_first_tablerow_item_in_vdatatable/ -->
@@ -118,6 +118,7 @@
         <div>
           <v-textarea
             v-model="content"
+            v-if="showTxt"
             label="Textarea default style"
             hint="This is a hint text">
           </v-textarea>
@@ -147,7 +148,10 @@
   let loadedSubFileTree = [];
   let subFileTreeLoaded = false;
   let content = "";
-  let show = false;
+  let showTree = false;
+  let showRootFileTree = false;
+  let showSubFileTree = false;
+  let showTxt = false;
   let openIds = [];
   let tempNode = "";
   let selectedFolder = -1;
@@ -174,14 +178,17 @@
         subFileTree,
         subFileTreeLoaded,
         content,
-        show,
+        showTree,
+        showRootFileTree,
+        showSubFileTree,
+        showTxt,
         openIds,
         selectedFile,
         selectedFolder,
         headers: [
           { text: 'Filename', align: 'start', /* sortable: false, */ value: 'name' },
           { text: 'Path', value: 'systemPath' },
-          { text: 'Type', value: 'obj' },
+          { text: 'Type', value: 'type' },
         ],
         selectedRows: [],
         dialog: false,
@@ -218,7 +225,10 @@
       async openRootFolder() { // This function opens a folder from the hard drive via the FileSystemAPI - Inspired by: https://www.youtube.com/watch?v=csCk4mrEmm8
         
         cancelJob = false
-        this.show = false // Resetting the visibility of the v-treeview modules in the template. If this is not done prior to assigning new data arrays (when opening a new folder after already showing one), the new v-treeview´s will intially show all nodes collapsed even though the attribute "open-all" is assigned to them
+        this.showTree = false // Resetting the visibility of the v-treeview modules in the template. If this is not done prior to assigning new data arrays (when opening a new folder after already showing one), the new v-treeview´s will intially show all nodes collapsed even though the attribute "open-all" is assigned to them
+        this.showRootFileTree = false
+        this.showSubFileTree = false
+        this.showTxt = false
         this.selectedFolder = -1
         this.selectedFile = -1
         this.openIds = []
@@ -254,7 +264,7 @@
 
         await this.loadRootFiles(this.dirHandle)
 
-        this.show = true // Making the v-treeview modules in the template visible
+        this.showTree = true // Making the v-treeview modules in the template visible
 
         console.log(this.folderTree) // Somehow when logging the dataTree in the console, it is kind of not shown correctly. The values of the nested objects cannot be seen in the console
       },
@@ -274,6 +284,8 @@
 
         // de-select the files in the v-data-table
         this.selectedFile = -1
+        this.showRootFileTree = false
+        this.showSubFileTree = false
         
         // Cancel running jobs
         if (runningJobs > 0) {
@@ -333,6 +345,8 @@
 
       async fileClick(node) { // This function is called by the v-treeview that shows the root files of a selected folder ("rootFileTree"). It resets the selection of nodes in the "subFileTree", calls the "readFile" function to show the selected file in the FilePanel and shows the index file of the folder when no node is selected at all
 
+        this.showTxt = false
+
         if (this.selectedFile === node.id) {
           
           console.log("entry de-selected - resetting index")
@@ -384,7 +398,7 @@
             id: systemPath.join('/'),
             name: entry.name,
             systemPath: systemPath.map((x) => x), // see description under fileObj
-            obj: "directory",
+            type: "directory",
             children: []
           };
 
@@ -420,7 +434,7 @@
               id: systemPath.join('/'),
               name: entry.name,
               systemPath: systemPath.map((x) => x), // see description under fileObj
-              obj: "directory",
+              type: "directory",
               children: []
             };
 
@@ -447,6 +461,7 @@
             if (savedRootFileTree.length > 0) {
               this.rootFileTree = savedRootFileTree
               this.rootFileTreeLoaded = true
+              this.showRootFileTree = true
             }
           }
           catch(err) {
@@ -468,6 +483,7 @@
 
             console.log('loaded from FileSystemAPI and updated the IndexedDB')
             this.rootFileTree = loadedRootFileTree
+            this.showRootFileTree = true
             set(this.rootFolder.name + ' rootFileTree: ' + rootFileTreePath.join('/'), loadedRootFileTree);
           }
 
@@ -476,6 +492,7 @@
         else {
           console.log('loaded from FileSystemAPI and saved in the IndexedDB')
           this.rootFileTree = loadedRootFileTree
+          this.showRootFileTree = true
           set(this.rootFolder.name + ' rootFileTree: ' + rootFileTreePath.join('/'), loadedRootFileTree);
         }
       },
@@ -499,7 +516,7 @@
             id: systemPath.join('/'),
             name: entry.name, // Name that is shown in the v-treeview as title of the node
             systemPath: systemPath.map((x) => x), // The systemPath has the following structure: "//folder/subfolder/etc." e. g. "//root/branch" (the own filename is excluded of the path but saved under value "name" above) - With the command join the apiPath array is transformed into a string and combined with the seperator '/' - This string is used to retrieve the fileHandlers from the IndexedDB in the funcitons "readFile" & "readIndexFile"
-            obj: "file",
+            type: entry.name.split('.').pop(),
             children: []
           };
 
@@ -527,6 +544,7 @@
             if (savedSubFileTree.length > 0) {
               this.subFileTree = savedSubFileTree
               this.subFileTreeLoaded = true
+              this.showSubFileTree = true
             }
           }
           catch(err) {
@@ -548,6 +566,7 @@
   
             console.log('loaded from FileSystemAPI and updated the IndexedDB')
             this.subFileTree = loadedSubFileTree
+            this.showSubFileTree = true
             set(this.rootFolder.name + ' subFileTree: ' + subFileTreePath.join('/'), loadedSubFileTree);
           }
 
@@ -556,6 +575,7 @@
         else {
           console.log('loaded from FileSystemAPI')
           this.subFileTree = loadedSubFileTree
+          this.showSubFileTree = true
           set(this.rootFolder.name + ' subFileTree: ' + subFileTreePath.join('/'), loadedSubFileTree);
         }
       },
@@ -580,7 +600,7 @@
             id: systemPath.join('/'),
             name: entry.name, // Name that is shown in the v-treeview as title of the node
             systemPath: systemPath.map((x) => x), // The systemPath has the following structure: "//folder/subfolder/etc." e. g. "//root/branch" (the own filename is excluded of the path but saved under value "name" above) - With the command join the apiPath array is transformed into a string and combined with the seperator '/' - This string is used to retrieve the fileHandlers from the IndexedDB in the funcitons "readFile" & "readIndexFile"
-            obj: "file",
+            type: entry.name.split('.').pop(),
             children: []
           };
 
@@ -605,7 +625,14 @@
       async readFile(fileHandle) { // This function is called by the "readRootFile" and "readSubFile" function. It searches the selected folder or subfolder for the (in the tree) selected file to show its content in the FilePanel         
         this.fileHandle = fileHandle
         let file = await fileHandle.getFile();
-        this.content = await file.text();
+
+        if (fileHandle.name.split('.').pop() === "txt") {
+          this.content = await file.text();
+          this.showTxt = true
+        }
+        else {
+          console.log("file type is not supported yet")
+        }
       },
 
       async writeFile() { // This function saves the currently selected file which is shown in the FilePanel to the system via the FileSystemAPI - Source: https://web.dev/file-system-access/
@@ -654,7 +681,7 @@
 
 .column {
   float: left;
-  max-height: calc((100vh - 200px));
+  max-height: calc((100vh - 75px));
   overflow: auto;
 }
 
@@ -683,24 +710,28 @@
   background-color: rgba(108, 160, 255, 0.308) !important;
 }
 
-.dataText {
+.dataNode {
   text-align: left;
   color: rgb(0, 0, 0);
 }
 
-.dataTextSelected {
+.dataNodeSelected {
   text-align: left;
   color: rgb(43, 151, 0);
   font-weight: 700;
 }
 
-.treeText {
+.folderTree {
+  text-align: left;
+}
+
+.treeNode {
   text-align: left;
   color: rgb(0, 0, 0);
   font-size: 15px;
 }
 
-.treeTextSelected {
+.treeNodeSelected {
   text-align: left;
   color: rgb(72, 121, 255);
   font-weight: 700;
