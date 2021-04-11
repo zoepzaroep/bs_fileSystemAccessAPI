@@ -77,7 +77,7 @@
             :items="rootFileTree"
           >
             <template v-slot:item="{ item, index }">
-              <tr @click="fileClick(item)" :key="index" class="dataNode" :class="{'dataNodeSelected': item.id === selectedFile}">
+              <tr @click="fileClick(item)" @dblclick="test()" :key="index" class="dataNode" :class="{'dataNodeSelected': item.id === selectedFile}">
                 <td>{{item.name}}</td>
                 <td>{{item.systemPath.join('/')}}</td>
                 <td>{{item.type}}</td>
@@ -624,7 +624,16 @@
 
       async readFile(fileHandle) { // This function is called by the "readRootFile" and "readSubFile" function. It searches the selected folder or subfolder for the (in the tree) selected file to show its content in the FilePanel         
         this.fileHandle = fileHandle
-        let file = await fileHandle.getFile();
+
+        let file
+
+        try {
+          file = await fileHandle.getFile();
+        }
+        catch {
+          console.log("index file is not available")
+          return
+        }
 
         if (fileHandle.name.split('.').pop() === "txt") {
           this.content = await file.text();
@@ -664,6 +673,8 @@
         console.log(encrypted)
         let decrypted = this.$aes.decrypt(encrypted)
         console.log(decrypted) */
+
+        console.log("test")
       },
     },
 
