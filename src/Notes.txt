@@ -1,24 +1,3 @@
-URGENT TODO:
-  - Make Electron App out of Vue project
-    - Open files in system App when double clicking
-
-LONGTERM TODO:
-  - Style whole treeview via SASS styling (see doc)
-  - Move the whole FilePanel into a seperate vue
-  - Detect changes of the sub-folder structure when clicking on a folder
-
-CONCEPTS:
-  - Multiple folder concept?
-    - folder name of the root folder is displayed in the Treeview
-    - possible to open another folder of a completely different location from the file system which is then shown alongside the other folder
-    - color code different folders differently
-  - Implement Encryption of single files
-  - Bulk Modification
-  - Facial Recognition on Photos
-  - GPX Data Visualization
-  - RSS Feeds loading
-
-
 STORING API RESPONSES IN INDEXEDDB
 
     File handles and directory handles are serializable, which means that you can save a file or directory handle to IndexedDB, or call postMessage() to send them between the same top-level origin.
